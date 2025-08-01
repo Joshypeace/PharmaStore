@@ -1,6 +1,9 @@
 const express = require('express');
 const inventoryController = require('../controllers/inventoryController');
 const authController = require('../controllers/authController');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' })
+
 
 const router = express.Router();
 
@@ -17,9 +20,10 @@ router.route('/:id')
     .delete(inventoryController.deleteItem);
 
 
-router.post('/import', inventoryController.importItems);
+router.post('/import', upload.single('file'), inventoryController.importItems);
 
 router.get('/stats/dashboard', inventoryController.getInventoryStats);
+
 router.get('/exists',inventoryController.checkInventoryExists);
 
 module.exports = router;

@@ -145,7 +145,7 @@ function updateDashboardStats(data) {
         ? ((data.todaySales - data.yesterdaySales) / data.yesterdaySales * 100).toFixed(1)
         : 100;
 
-    document.querySelector('[data-aos="fade-up"] .text-2xl').textContent = `₦${data.todaySales.toLocaleString()}`;
+    document.querySelector('[data-aos="fade-up"] .text-2xl').textContent = `MWK${data.todaySales.toLocaleString()}`;
     document.querySelector('[data-aos="fade-up"] .text-xs').innerHTML =
         `<i class="fas fa-arrow-up mr-1"></i> ${salesChange}% from yesterday`;
 
@@ -202,7 +202,7 @@ function renderCharts(data) {
             data: {
                 labels: chartData.map(item => item.day),
                 datasets: [{
-                    label: 'Daily Sales (₦)',
+                    label: 'Daily Sales (MWK)',
                     data: chartData.map(item => item.sales),
                     backgroundColor: 'rgba(14, 165, 233, 0.1)',
                     borderColor: 'rgba(14, 165, 233, 1)',
@@ -220,7 +220,7 @@ function renderCharts(data) {
                         beginAtZero: false,
                         grid: { drawBorder: false },
                         ticks: {
-                            callback: value => '₦' + value.toLocaleString()
+                            callback: value => 'MWK' + value.toLocaleString()
                         }
                     },
                     x: { grid: { display: false } }
