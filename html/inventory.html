@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaStore | Inventory</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-['Inter']">
+    <!-- Sidebar Navigation -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="hidden lg:flex lg:flex-shrink-0">
+            <div class="flex flex-col w-64 border-r border-gray-200 bg-white">
+                <!-- Logo -->
+                <div class="flex items-center h-16 px-4 border-b border-gray-200">
+                    <i class="fas fa-pills text-primary-600 text-2xl mr-2"></i>
+                    <span class="text-xl font-bold text-gray-800">PharmaStore</span>
+                </div>
+                <!-- Navigation -->
+                <div class="flex-1 flex flex-col overflow-y-auto">
+                    <nav class="flex-1 px-2 py-4 space-y-1">
+                        <a href="dashboard.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-tachometer-alt mr-3"></i>
+                            Dashboard
+                        </a>
+                        <a href="inventory.html" class="flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg">
+                            <i class="fas fa-boxes mr-3"></i>
+                            Inventory
+                        </a>
+                        <a href="sales.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-cash-register mr-3"></i>
+                            Sales
+                        </a>
+                        <a href="reports.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            Reports
+                        </a>
+                        <a href="settings.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-cog mr-3"></i>
+                            Settings
+                        </a>
+                    </nav>
+                </div>
+                <!-- User Profile -->
+                <div class="p-4 border-t border-gray-200">
+                    <div class="flex items-center">
+                        <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-700">John Doe</p>
+                            <p class="text-xs font-medium text-gray-500">Store Manager</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile sidebar -->
+        <div class="lg:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75 hidden" id="mobile-sidebar">
+            <div class="fixed inset-0 flex z-40">
+                <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white">
+                    <div class="absolute top-0 right-0 -mr-12 pt-2">
+                        <button type="button" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                            <span class="sr-only">Close sidebar</span>
+                            <i class="fas fa-times text-white"></i>
+                        </button>
+                    </div>
+                    <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                        <div class="flex-shrink-0 flex items-center px-4">
+                            <i class="fas fa-pills text-primary-600 text-2xl mr-2"></i>
+                            <span class="text-xl font-bold text-gray-800">PharmaStore</span>
+                        </div>
+                        <nav class="mt-5 px-2 space-y-1">
+                            <a href="dashboard.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-tachometer-alt mr-4"></i>
+                                Dashboard
+                            </a>
+                            <a href="inventory.html" class="flex items-center px-2 py-2 text-base font-medium text-white bg-primary-600 rounded-lg">
+                                <i class="fas fa-boxes mr-4"></i>
+                                Inventory
+                            </a>
+                            <a href="sales.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-cash-register mr-4"></i>
+                                Sales
+                            </a>
+                            <a href="reports.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-chart-bar mr-4"></i>
+                                Reports
+                            </a>
+                            <a href="settings.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-cog mr-4"></i>
+                                Settings
+                            </a>
+                        </nav>
+                    </div>
+                    <div class="flex-shrink-0 p-4 border-t border-gray-200">
+                        <div class="flex items-center">
+                            <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-700">John Doe</p>
+                                <p class="text-xs font-medium text-gray-500">Store Manager</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 w-14">
+                    <!-- Force sidebar to shrink to fit close icon -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto focus:outline-none">
+            <!-- Mobile Header -->
+            <div class="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+                <button type="button" class="text-gray-500 focus:outline-none" id="mobile-menu-button">
+                    <span class="sr-only">Open sidebar</span>
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center">
+                    <i class="fas fa-pills text-primary-600 text-xl mr-2"></i>
+                    <span class="text-lg font-bold text-gray-800">Inventory</span>
+                </div>
+                <div class="w-6"></div> <!-- Spacer for alignment -->
+            </div>
+
+            <!-- Desktop Header -->
+            <header class="hidden lg:flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-800">Inventory Management</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Search medicines..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                    <button class="p-2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <i class="fas fa-bell text-xl"></i>
+                    </button>
+                    <div class="relative">
+                        <button class="flex items-center space-x-2 focus:outline-none" id="user-menu-button">
+                            <span class="text-sm font-medium text-gray-700">John Doe</span>
+                            <img class="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        <!-- Dropdown menu -->
+                        <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10" id="user-menu">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                            <a href="" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="p-4 lg:p-8">
+                <!-- Inventory Actions -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-800">All Inventory Items</h2>
+                        <p class="text-sm text-gray-600">Manage your pharmacy stock and receive low stock alerts</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                        <button class="flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition transform hover:scale-105"
+                                data-aos="fade-left" data-aos-delay="100"
+                                onclick="openImportModal()">
+                            <i class="fas fa-file-import mr-2"></i>
+                            Import Excel
+                        </button>
+                        <button class="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition transform hover:scale-105"
+                                data-aos="fade-left" data-aos-delay="200"
+                                onclick="openAddItemModal()">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add Item
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Inventory Table -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden" data-aos="fade-up">
+                    <div class="p-6">
+                        <div class="overflow-x-auto">
+                            <table id="inventoryTable" class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (₦)</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <!-- Sample data from your screenshot -->
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Virus</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Acyclovir CrDAVIR</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">4,200</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(1)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Alugel 100m</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">4,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Low Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(2)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Antagit DS</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">4,500</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Low Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(3)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Antagit-DS</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">6,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(4)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Atagit-DS Gr</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">4,200</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">0</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(5)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">BRAlPORIN+</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">10</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(6)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Bisacodyl Tal</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2,500</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(7)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Esomeprazole</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">6,600</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(8)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Pybogel Orca</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">6</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(9)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Gas off Tab</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2,500</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">0</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(10)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Gastracid</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">8,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Low Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(11)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Savisson Doi</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3,500</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">4</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(12)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Grand-Pa</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">0</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(13)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Loperamide</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">0</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(14)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Ant-Adds</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Magnesium 1</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">23</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(15)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">CNS</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Alaugablin Plt</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">6,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-primary-600 hover:text-primary-900 mr-3" onclick="openEditModal(16)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+<!-- Import Excel Modal - Fixed ID -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden" id="importModal">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4" data-aos="zoom-in">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Import Inventory from Excel</h3>
+                <button class="text-gray-500 hover:text-gray-700" onclick="closeImportModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="importForm">
+                <div class="mb-6">
+                    <p class="text-sm text-gray-600 mb-4">
+                        Upload an Excel file (.xlsx, .csv) with your inventory data. Ensure the columns match the required format.
+                    </p>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <i class="fas fa-file-excel text-4xl text-green-600 mb-3"></i>
+                        <p class="text-sm text-gray-600 mb-3">Drag & drop your Excel file here, or click to browse</p>
+                        <input type="file" id="importFile" name="file" class="hidden" accept=".xlsx,.csv" required>
+                        <button type="button" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition" onclick="document.getElementById('importFile').click()">
+                            Select File
+                        </button>
+                        <p class="text-xs text-gray-500 mt-2" id="fileName">No file selected</p>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition" onclick="closeImportModal()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                        Import Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+ <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden" id="itemModal">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4" data-aos="zoom-in">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800" id="modalTitle">Add New Inventory Item</h3>
+                <button class="text-gray-500 hover:text-gray-700" onclick="closeItemModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="itemForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select id="category" name="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" required>
+                            <option value="">Select Category</option>
+                            <option value="Ant-Virus">Ant-Virus</option>
+                            <option value="Ant-Adds">Ant-Adds</option>
+                            <option value="CNS">CNS</option>
+                            <option value="Antibiotics">Antibiotics</option>
+                            <option value="Analgesics">Analgesics</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="itemType" class="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
+                        <select id="itemType" name="itemType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" required>
+                            <option value="">Select Type</option>
+                            <option value="Unit">Unit</option>
+                            <option value="Box">Box</option>
+                            <option value="Bottle">Bottle</option>
+                            <option value="Packet">Packet</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="itemName" class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                        <input type="text" id="itemName" name="itemName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Enter item name" required>
+                    </div>
+                    <div>
+                        <label for="variantName" class="block text-sm font-medium text-gray-700 mb-1">Variant Name (Optional)</label>
+                        <input type="text" id="variantName" name="variantName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Enter variant name">
+                    </div>
+                    <div>
+                        <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Price (₦)</label>
+                        <input type="number" step="0.01" id="price" name="price" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Enter price" required>
+                    </div>
+                    <div>
+                        <label for="stock" class="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
+                        <input type="number" id="stock" name="stock" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Enter quantity" required>
+                    </div>
+                    <div>
+                        <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-1">Expiry Date (Optional)</label>
+                        <input type="date" id="expiryDate" name="expiryDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition" onclick="closeItemModal()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                        Save Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+        <!-- <div id="emptyState" class="hidden text-center py-12">
+            <i class="fas fa-box-open text-4xl text-gray-400 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900">No inventory items found</h3>
+            <p class="text-gray-500 mt-1">Get started by importing your inventory or adding items manually</p>
+            <div class="mt-6">
+                <button onclick="openImportModal()" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    <i class="fas fa-file-import mr-2"></i>
+                    Import Excel
+                </button>
+                <button onclick="openAddItemModal()" class="ml-3 inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <i class="fas fa-plus mr-2"></i>
+                    Add Item
+                </button>
+            </div>
+        </div>
+    </div>
+</div> -->
+    <!-- AOS Animation JS -->
+    <script src="/js/inventory.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- jQuery (required for DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <!-- Custom JS -->
+</body>
+</html>

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaStore | Reports</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Flatpickr (datepicker) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-['Inter']">
+    <!-- Sidebar Navigation -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="hidden lg:flex lg:flex-shrink-0">
+            <div class="flex flex-col w-64 border-r border-gray-200 bg-white">
+                <!-- Logo -->
+                <div class="flex items-center h-16 px-4 border-b border-gray-200">
+                    <i class="fas fa-pills text-primary-600 text-2xl mr-2"></i>
+                    <span class="text-xl font-bold text-gray-800">PharmaStore</span>
+                </div>
+                <!-- Navigation -->
+                <div class="flex-1 flex flex-col overflow-y-auto">
+                    <nav class="flex-1 px-2 py-4 space-y-1">
+                        <a href="dashboard.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-tachometer-alt mr-3"></i>
+                            Dashboard
+                        </a>
+                        <a href="inventory.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-boxes mr-3"></i>
+                            Inventory
+                        </a>
+                        <a href="sales.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-cash-register mr-3"></i>
+                            Sales
+                        </a>
+                        <a href="reports.html" class="flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            Reports
+                        </a>
+                        <a href="settings.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-cog mr-3"></i>
+                            Settings
+                        </a>
+                    </nav>
+                </div>
+                <!-- User Profile -->
+                <div class="p-4 border-t border-gray-200">
+                    <div class="flex items-center">
+                        <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-700">John Doe</p>
+                            <p class="text-xs font-medium text-gray-500">Store Manager</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile sidebar -->
+        <div class="lg:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75 hidden" id="mobile-sidebar">
+            <div class="fixed inset-0 flex z-40">
+                <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white">
+                    <div class="absolute top-0 right-0 -mr-12 pt-2">
+                        <button type="button" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                            <span class="sr-only">Close sidebar</span>
+                            <i class="fas fa-times text-white"></i>
+                        </button>
+                    </div>
+                    <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                        <div class="flex-shrink-0 flex items-center px-4">
+                            <i class="fas fa-pills text-primary-600 text-2xl mr-2"></i>
+                            <span class="text-xl font-bold text-gray-800">PharmaStore</span>
+                        </div>
+                        <nav class="mt-5 px-2 space-y-1">
+                            <a href="dashboard.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-tachometer-alt mr-4"></i>
+                                Dashboard
+                            </a>
+                            <a href="inventory.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-boxes mr-4"></i>
+                                Inventory
+                            </a>
+                            <a href="sales.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-cash-register mr-4"></i>
+                                Sales
+                            </a>
+                            <a href="reports.html" class="flex items-center px-2 py-2 text-base font-medium text-white bg-primary-600 rounded-lg">
+                                <i class="fas fa-chart-bar mr-4"></i>
+                                Reports
+                            </a>
+                            <a href="settings.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-cog mr-4"></i>
+                                Settings
+                            </a>
+                        </nav>
+                    </div>
+                    <div class="flex-shrink-0 p-4 border-t border-gray-200">
+                        <div class="flex items-center">
+                            <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-700">John Doe</p>
+                                <p class="text-xs font-medium text-gray-500">Store Manager</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 w-14">
+                    <!-- Force sidebar to shrink to fit close icon -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto focus:outline-none">
+            <!-- Mobile Header -->
+            <div class="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+                <button type="button" class="text-gray-500 focus:outline-none" id="mobile-menu-button">
+                    <span class="sr-only">Open sidebar</span>
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center">
+                    <i class="fas fa-pills text-primary-600 text-xl mr-2"></i>
+                    <span class="text-lg font-bold text-gray-800">Reports</span>
+                </div>
+                <div class="w-6"></div> <!-- Spacer for alignment -->
+            </div>
+
+            <!-- Desktop Header -->
+            <header class="hidden lg:flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-800">Sales Reports & Analytics</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Search reports..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                    <button class="p-2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <i class="fas fa-bell text-xl"></i>
+                    </button>
+                    <div class="relative">
+                        <button class="flex items-center space-x-2 focus:outline-none" id="user-menu-button">
+                            <span class="text-sm font-medium text-gray-700">John Doe</span>
+                            <img class="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        <!-- Dropdown menu -->
+                        <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10" id="user-menu">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                            <a href="index.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="p-4 lg:p-8">
+                <!-- Report Filters -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-8" data-aos="fade-up">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-800">Report Filters</h2>
+                            <p class="text-sm text-gray-600">Customize your report by date range and type</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <select id="reportType" class="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2">
+                                <option value="daily">Daily Sales</option>
+                                <option value="weekly">Weekly Summary</option>
+                                <option value="monthly">Monthly Summary</option>
+                                <option value="custom">Custom Report</option>
+                            </select>
+                            <div class="flex items-center space-x-2">
+                                <input type="text" id="startDate" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2" placeholder="Start Date">
+                                <span class="text-gray-500">to</span>
+                                <input type="text" id="endDate" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2" placeholder="End Date">
+                            </div>
+                            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition" onclick="generateReport()">
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- Total Sales -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Total Sales</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1">₦248,750</p>
+                                <p class="text-xs text-green-500 mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i> 15.2% from last period
+                                </p>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-full">
+                                <i class="fas fa-wallet text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Sold -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up" data-aos-delay="100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Items Sold</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1">1,248</p>
+                                <p class="text-xs text-green-500 mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i> 8.7% from last period
+                                </p>
+                            </div>
+                            <div class="bg-blue-100 p-3 rounded-full">
+                                <i class="fas fa-box-open text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Average Sale -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up" data-aos-delay="200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Average Sale</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1">₦12,850</p>
+                                <p class="text-xs text-red-500 mt-1">
+                                    <i class="fas fa-arrow-down mr-1"></i> 2.3% from last period
+                                </p>
+                            </div>
+                            <div class="bg-purple-100 p-3 rounded-full">
+                                <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Sales Trend -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Sales Trend</h3>
+                            <select class="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2">
+                                <option>Last 7 Days</option>
+                                <option>Last 30 Days</option>
+                                <option>This Month</option>
+                                <option>This Year</option>
+                            </select>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="salesTrendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Top Selling Items -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up" data-aos-delay="100">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Top Selling Items</h3>
+                            <select class="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2">
+                                <option>This Month</option>
+                                <option>Last Month</option>
+                                <option>This Year</option>
+                            </select>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="topItemsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Sales Report -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden" data-aos="fade-up">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800">Detailed Sales Report</h3>
+                            <div class="flex items-center space-x-3">
+                                <button class="flex items-center px-3 py-1 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                    <i class="fas fa-file-export mr-2"></i>
+                                    Export
+                                </button>
+                                <button class="flex items-center px-3 py-1 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                    <i class="fas fa-print mr-2"></i>
+                                    Print
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sale ID</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">May 15, 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">#PS-1001</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Walk-in Customer</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3 items</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦15,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦0.00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">₦15,000</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">May 15, 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">#PS-1000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">John Smith</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5 items</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦25,000</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦1,250</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">₦23,750</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">May 14, 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">#PS-999</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Walk-in Customer</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2 items</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦8,500</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦0.00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">₦8,500</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">May 14, 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">#PS-998</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Mary Johnson</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">4 items</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦18,200</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦500</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">₦17,700</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">May 13, 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">#PS-997</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Walk-in Customer</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1 item</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦6,600</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦0.00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">₦6,600</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot class="bg-gray-50">
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-3 text-right text-sm font-bold text-gray-700">Totals:</td>
+                                        <td class="px-6 py-3 text-sm font-bold text-gray-900">₦73,300</td>
+                                        <td class="px-6 py-3 text-sm font-bold text-gray-900">₦1,750</td>
+                                        <td class="px-6 py-3 text-sm font-bold text-gray-900">₦71,550</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-3 text-right">
+                        <nav class="inline-flex -space-x-px">
+                            <a href="#" class="px-3 py-1 rounded-l-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">Previous</a>
+                            <a href="#" class="px-3 py-1 border-t border-b border-gray-300 bg-white text-sm font-medium text-primary-600 hover:bg-blue-50">1</a>
+                            <a href="#" class="px-3 py-1 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">2</a>
+                            <a href="#" class="px-3 py-1 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">3</a>
+                            <a href="#" class="px-3 py-1 rounded-r-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">Next</a>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Profit & Loss Section -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden mt-8" data-aos="fade-up" data-aos-delay="100">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800">Weekly Profit & Loss Statement</h3>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-600">Week of:</span>
+                                <input type="text" id="pldate" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2" placeholder="Select week">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Income -->
+                            <div>
+                                <h4 class="text-md font-medium text-gray-800 mb-4">Income</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-600">Product Sales</span>
+                                        <span class="text-sm font-medium text-gray-900">₦248,750</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-600">Other Income</span>
+                                        <span class="text-sm font-medium text-gray-900">₦5,200</span>
+                                    </div>
+                                    <div class="border-t border-gray-200 pt-2 mt-2 flex justify-between">
+                                        <span class="text-sm font-medium text-gray-700">Total Income</span>
+                                        <span class="text-sm font-bold text-gray-900">₦253,950</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Expenses -->
+                            <div>
+                                <h4 class="text-md font-medium text-gray-800 mb-4">Expenses</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-600">Inventory Purchases</span>
+                                        <span class="text-sm font-medium text-gray-900">₦127,500</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-600">Salaries & Wages</span>
+                                        <span class="text-sm font-medium text-gray-900">₦45,000</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-600">Rent & Utilities</span>
+                                        <span class="text-sm font-medium text-gray-900">₦25,000</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-600">Other Expenses</span>
+                                        <span class="text-sm font-medium text-gray-900">₦12,300</span>
+                                    </div>
+                                    <div class="border-t border-gray-200 pt-2 mt-2 flex justify-between">
+                                        <span class="text-sm font-medium text-gray-700">Total Expenses</span>
+                                        <span class="text-sm font-bold text-gray-900">₦209,800</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Net Profit -->
+                        <div class="border-t border-gray-200 mt-6 pt-6">
+                            <div class="flex justify-between">
+                                <span class="text-lg font-bold text-gray-800">Net Profit</span>
+                                <span class="text-lg font-bold text-green-600">₦44,150</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-3 text-right">
+                        <button class="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                            <i class="fas fa-download mr-2"></i>
+                            Download Full Report
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- AOS Animation JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <!-- Custom JS -->
+    <script src="../js/reports.js"></script>
+</body>
+</html>

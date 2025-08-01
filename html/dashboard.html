@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaStore | Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-['Inter']">
+    <!-- Sidebar Navigation -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="hidden lg:flex lg:flex-shrink-0">
+            <div class="flex flex-col w-64 border-r border-gray-200 bg-white">
+                <!-- Logo -->
+                <div class="flex items-center h-16 px-4 border-b border-gray-200">
+                    <i class="fas fa-pills text-primary-600 text-2xl mr-2"></i>
+                    <span class="text-xl font-bold text-gray-800">PharmaStore</span>
+                </div>
+                <!-- Navigation -->
+                <div class="flex-1 flex flex-col overflow-y-auto">
+                    <nav class="flex-1 px-2 py-4 space-y-1">
+                        <a href="dashboard.html" class="flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg">
+                            <i class="fas fa-tachometer-alt mr-3"></i>
+                            Dashboard
+                        </a>
+                        <a href="inventory.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-boxes mr-3"></i>
+                            Inventory
+                        </a>
+                        <a href="sales.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-cash-register mr-3"></i>
+                            Sales
+                        </a>
+                        <a href="reports.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            Reports
+                        </a>
+                        <a href="settings.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-cog mr-3"></i>
+                            Settings
+                        </a>
+                    </nav>
+                </div>
+                <!-- User Profile -->
+                <div class="p-4 border-t border-gray-200">
+                    <div class="flex items-center">
+                        <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-700">Josh Chilap</p>
+                            <p class="text-xs font-medium text-gray-500">Store Manager</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile sidebar -->
+        <div class="lg:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75 hidden" id="mobile-sidebar">
+            <div class="fixed inset-0 flex z-40">
+                <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white">
+                    <div class="absolute top-0 right-0 -mr-12 pt-2">
+                        <button type="button" id="" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                            <span class="sr-only">Close sidebar</span>
+                            <i class="fas fa-times text-white"></i>
+                        </button>
+                    </div>
+                    <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                        <div class="flex-shrink-0 flex items-center px-4">
+                            <i class="fas fa-pills text-primary-600 text-2xl mr-2"></i>
+                            <span class="text-xl font-bold text-gray-800">PharmaStore</span>
+                        </div>
+                        <nav class="mt-5 px-2 space-y-1">
+                            <a href="dashboard.html" class="flex items-center px-2 py-2 text-base font-medium text-white bg-primary-600 rounded-lg">
+                                <i class="fas fa-tachometer-alt mr-4"></i>
+                                Dashboard
+                            </a>
+                            <a href="inventory.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-boxes mr-4"></i>
+                                Inventory
+                            </a>
+                            <a href="sales.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-cash-register mr-4"></i>
+                                Sales
+                            </a>
+                            <a href="reports.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-chart-bar mr-4"></i>
+                                Reports
+                            </a>
+                            <a href="settings.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-cog mr-4"></i>
+                                Settings
+                            </a>
+                        </nav>
+                    </div>
+                    <div class="flex-shrink-0 p-4 border-t border-gray-200">
+                        <div class="flex items-center">
+                            <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-700">Josh Chilap</p>
+                                <p class="text-xs font-medium text-gray-500">Store Manager</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 w-14">
+                    <!-- Force sidebar to shrink to fit close icon -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto focus:outline-none">
+            <!-- Mobile Header -->
+            <div class="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+                <button type="button" class="text-gray-500 focus:outline-none" id="mobile-menu-button">
+                    <span class="sr-only">Open sidebar</span>
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center">
+                    <i class="fas fa-pills text-primary-600 text-xl mr-2"></i>
+                    <span class="text-lg font-bold text-gray-800">Dashboard</span>
+                </div>
+                <div class="w-6"></div> <!-- Spacer for alignment -->
+            </div>
+
+            <!-- Desktop Header -->
+            <header class="hidden lg:flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Search..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                    <button class="p-2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <i class="fas fa-bell text-xl"></i>
+                    </button>
+                    <div class="relative">
+                        <button class="flex items-center space-x-2 focus:outline-none" id="user-menu-button">
+                            <span class="text-sm font-medium text-gray-700">Josh Chilap</span>
+                            <img class="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        <!-- Dropdown menu -->
+                        <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10" id="user-menu">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                            <a href="" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" id="sign-out">Sign out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="p-4 lg:p-8">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Total Sales -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Today's Sales</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1">₦142,500</p>
+                                <p class="text-xs text-green-500 mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i> 12.5% from yesterday
+                                </p>
+                            </div>
+                            <div class="bg-primary-100 p-3 rounded-full">
+                                <i class="fas fa-wallet text-primary-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inventory Items -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up" data-aos-delay="100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Inventory Items</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1">1,248</p>
+                                <p class="text-xs text-red-500 mt-1">
+                                    <i class="fas fa-exclamation-circle mr-1"></i> 12 low in stock
+                                </p>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-full">
+                                <i class="fas fa-boxes text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Out of Stock -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up" data-aos-delay="200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Out of Stock</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1">8</p>
+                                <p class="text-xs text-yellow-500 mt-1">
+                                    <i class="fas fa-clock mr-1"></i> 3 pending orders
+                                </p>
+                            </div>
+                            <div class="bg-yellow-100 p-3 rounded-full">
+                                <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expiring Soon -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up" data-aos-delay="300">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Expiring Soon</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1">15</p>
+                                <p class="text-xs text-red-500 mt-1">
+                                    <i class="fas fa-calendar-times mr-1"></i> Within 30 days
+                                </p>
+                            </div>
+                            <div class="bg-red-100 p-3 rounded-full">
+                                <i class="fas fa-calendar-alt text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Sales Chart -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Weekly Sales</h2>
+                            <select class="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                                <option>This Week</option>
+                                <option>Last Week</option>
+                                <option>This Month</option>
+                            </select>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Inventory Categories -->
+                    <div class="bg-white rounded-xl shadow-sm p-6" data-aos="fade-up" data-aos-delay="100">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Inventory by Category</h2>
+                            <select class="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                                <option>All Categories</option>
+                                <option>Antivirals</option>
+                                <option>Antacids</option>
+                                <option>CNS</option>
+                            </select>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="inventoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Sales & Low Stock -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Recent Sales -->
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden" data-aos="fade-up">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-4">Recent Sales</h2>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Acyclovir CrDAVIR</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">2</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">₦8,400</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">10:45 AM</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Esomeprazole</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">1</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">₦6,600</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">10:32 AM</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Gastracid</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">3</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">₦24,000</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">9:15 AM</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Alugel 100m</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">2</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">₦8,000</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">9:02 AM</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">BRAlPORIN+</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">5</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">₦15,000</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">8:45 AM</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 text-right">
+                            <a href="sales.html" class="text-sm font-medium text-primary-600 hover:text-primary-500">View all sales</a>
+                        </div>
+                    </div>
+
+                    <!-- Low Stock Items -->
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-4">Low Stock Items</h2>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Atagit-DS Gr</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Ant-Acids</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">0</td>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Gas off Tab</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Ant-Acids</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">0</td>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Grand-Pa</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Ant-Acids</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">0</td>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Loperamide</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Ant-Acids</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">0</td>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Antagit DS</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Ant-Acids</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">1</td>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Low Stock</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 text-right">
+                            <a href="inventory.html" class="text-sm font-medium text-primary-600 hover:text-primary-500">View all inventory</a>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- AOS Animation JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Custom JS -->
+    <script src="../js/dashboard.js"></script>
+</body>
+</html>

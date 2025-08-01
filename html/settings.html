@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaStore | Settings</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-['Inter']">
+    <!-- Sidebar Navigation -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="hidden lg:flex lg:flex-shrink-0">
+            <div class="flex flex-col w-64 border-r border-gray-200 bg-white">
+                <!-- Logo -->
+                <div class="flex items-center h-16 px-4 border-b border-gray-200">
+                    <i class="fas fa-pills text-primary-600 text-2xl mr-2"></i>
+                    <span class="text-xl font-bold text-gray-800">PharmaStore</span>
+                </div>
+                <!-- Navigation -->
+                <div class="flex-1 flex flex-col overflow-y-auto">
+                    <nav class="flex-1 px-2 py-4 space-y-1">
+                        <a href="dashboard.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-tachometer-alt mr-3"></i>
+                            Dashboard
+                        </a>
+                        <a href="inventory.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-boxes mr-3"></i>
+                            Inventory
+                        </a>
+                        <a href="sales.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-cash-register mr-3"></i>
+                            Sales
+                        </a>
+                        <a href="reports.html" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            Reports
+                        </a>
+                        <a href="settings.html" class="flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg">
+                            <i class="fas fa-cog mr-3"></i>
+                            Settings
+                        </a>
+                    </nav>
+                </div>
+                <!-- User Profile -->
+                <div class="p-4 border-t border-gray-200">
+                    <div class="flex items-center">
+                        <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-700">John Doe</p>
+                            <p class="text-xs font-medium text-gray-500">Store Manager</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile sidebar -->
+        <div class="lg:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75 hidden" id="mobile-sidebar">
+            <div class="fixed inset-0 flex z-40">
+                <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white">
+                    <div class="absolute top-0 right-0 -mr-12 pt-2">
+                        <button type="button" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                            <span class="sr-only">Close sidebar</span>
+                            <i class="fas fa-times text-white"></i>
+                        </button>
+                    </div>
+                    <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                        <div class="flex-shrink-0 flex items-center px-4">
+                            <i class="fas fa-pills text-primary-600 text-2xl mr-2"></i>
+                            <span class="text-xl font-bold text-gray-800">PharmaStore</span>
+                        </div>
+                        <nav class="mt-5 px-2 space-y-1">
+                            <a href="dashboard.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-tachometer-alt mr-4"></i>
+                                Dashboard
+                            </a>
+                            <a href="inventory.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-boxes mr-4"></i>
+                                Inventory
+                            </a>
+                            <a href="sales.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-cash-register mr-4"></i>
+                                Sales
+                            </a>
+                            <a href="reports.html" class="flex items-center px-2 py-2 text-base font-medium text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                                <i class="fas fa-chart-bar mr-4"></i>
+                                Reports
+                            </a>
+                            <a href="settings.html" class="flex items-center px-2 py-2 text-base font-medium text-white bg-primary-600 rounded-lg">
+                                <i class="fas fa-cog mr-4"></i>
+                                Settings
+                            </a>
+                        </nav>
+                    </div>
+                    <div class="flex-shrink-0 p-4 border-t border-gray-200">
+                        <div class="flex items-center">
+                            <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-700">John Doe</p>
+                                <p class="text-xs font-medium text-gray-500">Store Manager</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 w-14">
+                    <!-- Force sidebar to shrink to fit close icon -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto focus:outline-none">
+            <!-- Mobile Header -->
+            <div class="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+                <button type="button" class="text-gray-500 focus:outline-none" id="mobile-menu-button">
+                    <span class="sr-only">Open sidebar</span>
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center">
+                    <i class="fas fa-pills text-primary-600 text-xl mr-2"></i>
+                    <span class="text-lg font-bold text-gray-800">Settings</span>
+                </div>
+                <div class="w-6"></div> <!-- Spacer for alignment -->
+            </div>
+
+            <!-- Desktop Header -->
+            <header class="hidden lg:flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-800">System Settings</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Search settings..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                    <button class="p-2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <i class="fas fa-bell text-xl"></i>
+                    </button>
+                    <div class="relative">
+                        <button class="flex items-center space-x-2 focus:outline-none" id="user-menu-button">
+                            <span class="text-sm font-medium text-gray-700">John Doe</span>
+                            <img class="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        <!-- Dropdown menu -->
+                        <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10" id="user-menu">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                            <a href="index.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="p-4 lg:p-8">
+                <!-- Settings Tabs -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-8" data-aos="fade-up">
+                    <div class="border-b border-gray-200">
+                        <nav class="flex -mb-px">
+                            <button id="general-tab" class="py-4 px-6 text-center border-b-2 font-medium text-sm border-primary-500 text-primary-600">
+                                <i class="fas fa-cog mr-2"></i> General
+                            </button>
+                            <button id="notifications-tab" class="py-4 px-6 text-center border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                <i class="fas fa-bell mr-2"></i> Notifications
+                            </button>
+                            <button id="backup-tab" class="py-4 px-6 text-center border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                <i class="fas fa-database mr-2"></i> Backup
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- General Settings -->
+                <div id="general-settings" class="settings-section">
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-8" data-aos="fade-up">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-6">Store Information</h2>
+                            <form class="space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="store-name" class="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
+                                        <input type="text" id="store-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" value="PharmaStore">
+                                    </div>
+                                    <div>
+                                        <label for="store-phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                        <input type="tel" id="store-phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" value="+1 (555) 123-4567">
+                                    </div>
+                                    <div>
+                                        <label for="store-email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                        <input type="email" id="store-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" value="info@pharmastore.com">
+                                    </div>
+                                    <div>
+                                        <label for="store-tax" class="block text-sm font-medium text-gray-700 mb-1">Tax ID</label>
+                                        <input type="text" id="store-tax" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" value="TAX-123456789">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="store-address" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                    <textarea id="store-address" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">123 Pharmacy Street, Health City, HC 12345</textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 text-right">
+                            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-8" data-aos="fade-up" data-aos-delay="100">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-6">Business Hours</h2>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-700">Monday - Friday</span>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="time" class="border border-gray-300 rounded-lg px-3 py-1" value="08:00">
+                                        <span>to</span>
+                                        <input type="time" class="border border-gray-300 rounded-lg px-3 py-1" value="20:00">
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-700">Saturday</span>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="time" class="border border-gray-300 rounded-lg px-3 py-1" value="09:00">
+                                        <span>to</span>
+                                        <input type="time" class="border border-gray-300 rounded-lg px-3 py-1" value="18:00">
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-700">Sunday</span>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="time" class="border border-gray-300 rounded-lg px-3 py-1" value="10:00">
+                                        <span>to</span>
+                                        <input type="time" class="border border-gray-300 rounded-lg px-3 py-1" value="16:00">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 text-right">
+                            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden" data-aos="fade-up" data-aos-delay="200">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-6">Receipt Configuration</h2>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Header Text</label>
+                                        <p class="text-xs text-gray-500">Appears at the top of receipts</p>
+                                    </div>
+                                    <textarea rows="2" class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">Thank you for shopping with us!</textarea>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Footer Text</label>
+                                        <p class="text-xs text-gray-500">Appears at the bottom of receipts</p>
+                                    </div>
+                                    <textarea rows="2" class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">Returns accepted within 7 days with receipt</textarea>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-sm font-medium text-gray-700">Show Tax Breakdown</label>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-sm font-medium text-gray-700">Show Barcode on Receipt</label>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 text-right">
+                            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Settings -->
+                <div id="notifications-settings" class="settings-section hidden">
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-8" data-aos="fade-up">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-6">Notification Preferences</h2>
+                            <div class="space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Low Stock Alerts</label>
+                                        <p class="text-xs text-gray-500">Receive notifications when inventory is low</p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Out of Stock Alerts</label>
+                                        <p class="text-xs text-gray-500">Receive notifications when items are out of stock</p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Daily Sales Summary</label>
+                                        <p class="text-xs text-gray-500">Receive a summary of daily sales</p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Weekly Reports</label>
+                                        <p class="text-xs text-gray-500">Receive weekly sales and inventory reports</p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 text-right">
+                            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backup Settings -->
+                <div id="backup-settings" class="settings-section hidden">
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-8" data-aos="fade-up">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-6">Data Backup</h2>
+                            <div class="space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Automatic Backups</label>
+                                        <p class="text-xs text-gray-500">Automatically backup data daily</p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Backup Time</label>
+                                        <p class="text-xs text-gray-500">Time when automatic backups occur</p>
+                                    </div>
+                                    <input type="time" class="border border-gray-300 rounded-lg px-3 py-1" value="02:00">
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Backup Retention</label>
+                                        <p class="text-xs text-gray-500">How long to keep backup files</p>
+                                    </div>
+                                    <select class="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2">
+                                        <option>30 days</option>
+                                        <option>60 days</option>
+                                        <option>90 days</option>
+                                        <option>1 year</option>
+                                    </select>
+                                </div>
+                                <div class="border-t border-gray-200 pt-4">
+                                    <h3 class="text-md font-medium text-gray-800 mb-3">Manual Backup</h3>
+                                    <div class="flex flex-col sm:flex-row gap-3">
+                                        <button class="flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                                            <i class="fas fa-download mr-2"></i>
+                                            Create Backup Now
+                                        </button>
+                                        <button class="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                            <i class="fas fa-upload mr-2"></i>
+                                            Restore from Backup
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-6">Recent Backups</h2>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Today, 02:00 AM</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Automatic</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">24.5 MB</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button class="text-primary-600 hover:text-primary-900 mr-3">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                                <button class="text-red-600 hover:text-red-900">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Yesterday, 02:00 AM</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Automatic</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">24.3 MB</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button class="text-primary-600 hover:text-primary-900 mr-3">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                                <button class="text-red-600 hover:text-red-900">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">May 14, 2023, 02:00 AM</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Automatic</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">24.1 MB</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button class="text-primary-600 hover:text-primary-900 mr-3">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                                <button class="text-red-600 hover:text-red-900">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">May 13, 2023, 02:00 AM</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Automatic</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">23.9 MB</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button class="text-primary-600 hover:text-primary-900 mr-3">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                                <button class="text-red-600 hover:text-red-900">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 text-right">
+                            <nav class="inline-flex -space-x-px">
+                                <a href="#" class="px-3 py-1 rounded-l-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">Previous</a>
+                                <a href="#" class="px-3 py-1 border-t border-b border-gray-300 bg-white text-sm font-medium text-primary-600 hover:bg-blue-50">1</a>
+                                <a href="#" class="px-3 py-1 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">2</a>
+                                <a href="#" class="px-3 py-1 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">3</a>
+                                <a href="#" class="px-3 py-1 rounded-r-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">Next</a>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- AOS Animation JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Custom JS -->
+    <script src="../js/settings.js"> </script>
+</body>
+</html>
