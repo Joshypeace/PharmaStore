@@ -33,11 +33,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 async function checkInventoryExists() {
     try {
-        const token = getToken();
+        // const token = getToken();
 
-        const response = await fetch('http://localhost:5000/api/inventory/exists', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch('http://localhost:5000/api/inventory/exists');
 
         if (response.status === 401){
             showAlert('Session expired. Please login again, ', 'error');
@@ -59,7 +57,7 @@ async function checkInventoryExists() {
 function logout(){
     localStorage.removeItem('pharmaToken');
     sessionStorage.removeItem('pharmaToken');
-    window.location.href = '/html/index.htmt'
+    window.location.href = 'html/index.html'
 }
 
 async function loadInventoryData() {
@@ -300,7 +298,7 @@ function getToken() {
     const token = localStorage.getItem('pharmaToken') || sessionStorage.getItem('pharmaToken');
    if(!token){
      showAlert('Please login to access this feature', 'errpr');
-     window.location.href = '/html/index.html';
+     window.location.href = 'html/index.html';
      throw new Error('No token available');
 
    }

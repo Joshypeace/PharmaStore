@@ -258,8 +258,7 @@ exports.importItems = async (req, res, next) => {
     // Loop through each row of the Excel data
     for (const item of data) {
       try {
-        // Correctly destructure the variables using the uppercase column headers from your file.
-        // Also, rename them to match the database column names for clarity.
+       
         const {
           CATEGORY,
           ITEM_TYPE: type,
@@ -269,8 +268,7 @@ exports.importItems = async (req, res, next) => {
           STOCK: stock
         } = item;
 
-        // The 'expiry_date' column is missing from your file.
-        // We will default it to null to avoid a database error.
+     
         const expiry_date = null;
 
         let category_id;

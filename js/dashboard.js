@@ -117,7 +117,7 @@ async function checkAuthAndLoadData() {
     } catch (error) {
         console.error('Error:', error);
         showAlert(error.message, 'error');
-        window.location.href = 'index.html';
+        window.location.href = 'html/index.html';
     }
 }
 
