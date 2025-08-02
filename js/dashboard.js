@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             localStorage.removeItem('pharmaToken');
             sessionStorage.removeItem('pharmaToken');
-            window.location.href = 'html/index.html';
+            window.location.href = '../index.html';
         });
     }
 });
@@ -117,7 +117,7 @@ async function checkAuthAndLoadData() {
     } catch (error) {
         console.error('Error:', error);
         showAlert(error.message, 'error');
-        window.location.href = 'html/index.html';
+        window.location.href = '../index.html';
     }
 }
 

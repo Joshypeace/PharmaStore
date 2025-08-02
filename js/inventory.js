@@ -33,12 +33,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
 async function checkInventoryExists() {
     try {
-        // const token = getToken();
+        const token = getToken();
+        if (!token) {
+            showAlert('No token found. Please login again.', 'error');
+            logout();
+            return;
+        }
 
-        const response = await fetch('http://localhost:5000/api/inventory/exists');
+        const response = await fetch('http://localhost:5000/api/inventory/exists', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-        if (response.status === 401){
-            showAlert('Session expired. Please login again, ', 'error');
+        if (response.status === 401) {
+            showAlert('Session expired. Please login again.', 'error');
             logout();
             return;
         }
@@ -57,7 +66,7 @@ async function checkInventoryExists() {
 function logout(){
     localStorage.removeItem('pharmaToken');
     sessionStorage.removeItem('pharmaToken');
-    window.location.href = 'html/index.html'
+    window.location.href = '../index.html'
 }
 
 async function loadInventoryData() {
@@ -297,8 +306,8 @@ function showAlert(message, type) {
 function getToken() {
     const token = localStorage.getItem('pharmaToken') || sessionStorage.getItem('pharmaToken');
    if(!token){
-     showAlert('Please login to access this feature', 'errpr');
-     window.location.href = 'html/index.html';
+     showAlert('Please login to access this feature', 'error');
+     window.location.href = '../index.html';
      throw new Error('No token available');
 
    }

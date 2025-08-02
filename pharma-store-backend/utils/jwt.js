@@ -6,7 +6,7 @@ const signToken = (id, role) => {
   return jwt.sign(
     { id, role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '1d' } // Fallback to 1d if undefined
+    { expiresIn: process.env.JWT_EXPIRES_IN} 
   );
 };
 
