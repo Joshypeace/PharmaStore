@@ -26,8 +26,13 @@ document.addEventListener('DOMContentLoaded', function () {
     
     document.getElementById('importForm').addEventListener('submit', handleImportSubmit);
     document.getElementById('itemForm').addEventListener('submit', handleItemSubmit);
-    checkInventoryExists();
 
+    const inventoryTab = document.getElementById('inventoryTab');
+    if(inventoryTab){
+        inventoryTab.addEventListener('click', function (){
+            checkInventoryExists();
+        });
+    }
 });
 
 
