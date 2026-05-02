@@ -1,10 +1,9 @@
-// src/app/api/auth/register/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
-// Validation schema
+// Validation schema with coordinates
 const registerSchema = z.object({
   pharmacyName: z.string().min(2, 'Pharmacy name must be at least 2 characters'),
   ownerName: z.string().min(2, 'Owner name must be at least 2 characters'),
@@ -12,6 +11,9 @@ const registerSchema = z.object({
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   licenseNumber: z.string().min(5, 'License number must be at least 5 characters'),
   location: z.string().min(2, 'Location is required'),
+  latitude: z.number().min(-90).max(90, 'Invalid latitude'),
+  longitude: z.number().min(-180).max(180, 'Invalid longitude'),
+  placeId: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
@@ -26,7 +28,18 @@ export async function POST(request: Request) {
     // Validate input
     const validatedData = registerSchema.parse(body)
     
-    const { pharmacyName, ownerName, email, phone, licenseNumber, location, password } = validatedData
+    const { 
+      pharmacyName, 
+      ownerName, 
+      email, 
+      phone, 
+      licenseNumber, 
+      location, 
+      latitude, 
+      longitude,
+      placeId,
+      password 
+    } = validatedData
 
     // Check if pharmacy already exists
     const existingPharmacy = await prisma.pharmacy.findFirst({
@@ -61,58 +74,79 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validate coordinates are not zero (except for testing)
+    if (latitude === 0 && longitude === 0 && process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Invalid location', message: 'Please provide accurate location coordinates' },
+        { status: 400 }
+      )
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create pharmacy and user in transaction - use the correct transaction syntax
-    const [pharmacy, user] = await prisma.$transaction([
-      prisma.pharmacy.create({
+    // Create pharmacy and user in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the pharmacy with coordinates
+      const pharmacy = await tx.pharmacy.create({
         data: {
           name: pharmacyName,
           licenseNumber,
           ownerName,
           email,
           phone,
-          location,
-          latitude: 0,
-          longitude: 0
+          location, // Store the formatted address
+          latitude,
+          longitude,
         }
-      }),
-      prisma.user.create({
+      })
+
+      // Optional: Store placeId in a separate table or note field if needed
+      // For now, we'll just log it or you could add a placeId field to Pharmacy model
+      if (placeId && process.env.NODE_ENV !== 'production') {
+        console.log(`Place ID for ${pharmacyName}: ${placeId}`)
+      }
+
+      // Create the user with pharmacy association
+      const user = await tx.user.create({
         data: {
           email,
           password: hashedPassword,
           name: ownerName,
           role: 'ADMIN',
-          pharmacyId: '' // This will be set after pharmacy creation
+          pharmacyId: pharmacy.id,
+          status: 'ACTIVE',
         }
       })
-    ])
 
-    // Update user with pharmacy ID
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { pharmacyId: pharmacy.id }
-    })
+      // Create activity log
+      await tx.activityLog.create({
+        data: {
+          type: 'LOGIN',
+          message: `Pharmacy account created for ${pharmacyName} with location (${latitude}, ${longitude})`,
+          userId: user.id
+        }
+      })
 
-    // Create activity log
-    await prisma.activityLog.create({
-      data: {
-        type: 'LOGIN',
-        message: 'Pharmacy account created and admin user registered',
-        userId: user.id
-      }
+      return { pharmacy, user }
     })
 
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user
+    const { password: _, ...userWithoutPassword } = result.user
 
     return NextResponse.json(
       { 
         success: true, 
         message: 'Registration successful',
         data: {
-          pharmacyId: pharmacy.id,
+          pharmacyId: result.pharmacy.id,
+          pharmacyLocation: {
+            address: result.pharmacy.location,
+            coordinates: {
+              latitude: result.pharmacy.latitude,
+              longitude: result.pharmacy.longitude
+            }
+          },
           user: userWithoutPassword
         }
       },
@@ -132,8 +166,16 @@ export async function POST(request: Request) {
       )
     }
 
+    // Handle Prisma unique constraint errors
+    if (error instanceof Error && error.message.includes('Unique constraint')) {
+      return NextResponse.json(
+        { error: 'Duplicate entry', message: 'A record with this information already exists' },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error', message: 'Failed to create account' },
+      { error: 'Internal server error', message: 'Failed to create account. Please try again later.' },
       { status: 500 }
     )
   }
