@@ -48,6 +48,7 @@ model Pharmacy {
   location      String
   latitude      Float
   longitude     Float
+  placeId       String?   // For Google Maps integration
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
