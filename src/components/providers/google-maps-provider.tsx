@@ -12,7 +12,7 @@ interface GoogleMapsProviderProps {
 export function GoogleMapsProvider({ children }: GoogleMapsProviderProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-maps-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries,
     // retries: 3,
     // retryDelay: 1000,
