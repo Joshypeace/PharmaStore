@@ -180,8 +180,8 @@ export function LocationPicker({ onLocationSelect, initialValue = '', error }: L
             }
           )
         })
-        phoneNumber = (details as any).phoneNumber
-        website = (details as any).website
+        phoneNumber = (details as { phoneNumber: string }).phoneNumber
+        website = (details as { website: string }).website
       } catch (err) {
         console.log('Could not fetch additional details:', err)
       }
@@ -225,8 +225,8 @@ export function LocationPicker({ onLocationSelect, initialValue = '', error }: L
       
       try {
         const locationData = await parseGoogleMapsUrl(pastedText)
-        if (locationData && (locationData as any).address) {
-          const data = locationData as any
+        if (locationData && (locationData as { address: string }).address) {
+          const data = locationData as {address: string, lat: number, lng: number, placeId: string, phoneNumber?: string, website?: string }
           setSelectedAddress(data.address)
           onLocationSelect({
             formattedAddress: data.address,
@@ -306,7 +306,7 @@ export function LocationPicker({ onLocationSelect, initialValue = '', error }: L
             <li className="border-t px-4 py-2 bg-gray-50">
               <div className="text-xs text-gray-500 flex items-center gap-1">
                 <LinkIcon className="h-3 w-3" />
-                Can't find it? Paste a Google Maps link instead
+                Can&apos;t find it? Paste a Google Maps link instead
               </div>
             </li>
           </ul>
