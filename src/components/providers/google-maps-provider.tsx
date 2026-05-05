@@ -13,7 +13,7 @@ export function GoogleMapsProvider({ children }: GoogleMapsProviderProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-maps-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries,
+    libraries: ['places'],
     // retries: 3,
     // retryDelay: 1000,
   })
