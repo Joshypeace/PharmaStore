@@ -5,7 +5,6 @@ import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocom
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MapPin, Loader2, CheckCircle, AlertCircle, Link as LinkIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 interface LocationPickerProps {
   onLocationSelect: (location: {
@@ -49,95 +48,147 @@ export function LocationPicker({ onLocationSelect, initialValue = '', error }: L
     }
   }, [value, selectedAddress])
 
-  // Parse Google Maps URL and extract location
-  const parseGoogleMapsUrl = async (url: string) => {
-    try {
-      // Extract place ID from various Google Maps URL formats
-      let placeId = null
-      let coordinates = null
+  // Extract place ID or coordinates from Google Maps URL (no fetch needed!)
+  const extractLocationFromUrl = (url: string): { placeId?: string; lat?: number; lng?: number } => {
+    let placeId: string | undefined
+    let lat: number | undefined
+    let lng: number | undefined
 
-      // Format 1: https://maps.app.goo.gl/xxxxxx
-      if (url.includes('maps.app.goo.gl')) {
-        // Need to follow redirect to get actual place ID
-        const response = await fetch(url, { method: 'HEAD' })
-        const finalUrl = response.url
-        return parseGoogleMapsUrl(finalUrl)
-      }
-      
-      // Format 2: https://www.google.com/maps/place/...
-      const placeMatch = url.match(/place\/([^\/\?]+)/)
-      if (placeMatch) {
-        placeId = decodeURIComponent(placeMatch[1])
-      }
-      
-      // Format 3: https://www.google.com/maps/@lat,lng,zoom
-      const coordMatch = url.match(/@([-\d.]+),([-\d.]+)/)
-      if (coordMatch) {
-        coordinates = {
-          lat: parseFloat(coordMatch[1]),
-          lng: parseFloat(coordMatch[2])
-        }
-      }
+    // Pattern 1: Place ID in URL - https://www.google.com/maps/place/Place+Name/@lat,lng,zoom/data=!3m1!4b1!4m6!3m5!1sCHIJabcdef...
+    // Look for !1s followed by place ID
+    const placeIdMatch = url.match(/!1s([a-zA-Z0-9_-]+)/)
+    if (placeIdMatch) {
+      placeId = placeIdMatch[1]
+    }
 
-      // Format 4: Short link with !3d and !4d parameters
-      const latMatch = url.match(/!3d([-\d.]+)/)
-      const lngMatch = url.match(/!4d([-\d.]+)/)
-      if (latMatch && lngMatch) {
-        coordinates = {
-          lat: parseFloat(latMatch[1]),
-          lng: parseFloat(lngMatch[1])
-        }
-      }
+    // Pattern 2: Direct place ID in /place/ path
+    const placePathMatch = url.match(/\/place\/[^/]+\/([a-zA-Z0-9_-]+)/)
+    if (placePathMatch && !placeId) {
+      placeId = placePathMatch[1]
+    }
 
-      if (placeId) {
-        // Use Place ID to get details
-        const service = new google.maps.places.PlacesService(document.createElement('div'))
-        return new Promise((resolve, reject) => {
-          service.getDetails(
-            {
+    // Pattern 3: Coordinates from @lat,lng zoom
+    const coordMatch = url.match(/@([-\d.]+),([-\d.]+)/)
+    if (coordMatch) {
+      lat = parseFloat(coordMatch[1])
+      lng = parseFloat(coordMatch[2])
+    }
+
+    // Pattern 4: !3d and !4d parameters (latitude and longitude)
+    const latParamMatch = url.match(/!3d([-\d.]+)/)
+    const lngParamMatch = url.match(/!4d([-\d.]+)/)
+    if (latParamMatch && lngParamMatch) {
+      lat = parseFloat(latParamMatch[1])
+      lng = parseFloat(lngParamMatch[1])
+    }
+
+    return { placeId, lat, lng }
+  }
+
+  // Search for a place using coordinates
+  const searchByCoordinates = async (lat: number, lng: number) => {
+    const geocoder = new google.maps.Geocoder()
+    const result = await geocoder.geocode({
+      location: { lat, lng }
+    })
+    if (result.results[0]) {
+      return {
+        address: result.results[0].formatted_address,
+        lat,
+        lng,
+        placeId: result.results[0].place_id,
+      }
+    }
+    throw new Error('Could not find address for these coordinates')
+  }
+
+  // Search for a place using place ID
+  const searchByPlaceId = async (placeId: string): Promise<{ address: string; lat: number; lng: number; placeId: string; phoneNumber?: string; website?: string }> => {
+    return new Promise((resolve, reject) => {
+      const service = new google.maps.places.PlacesService(document.createElement('div'))
+      service.getDetails(
+        {
+          placeId: placeId,
+          fields: ['formatted_address', 'geometry', 'name', 'formatted_phone_number', 'website']
+        },
+        (result, status) => {
+          if (status === 'OK' && result && result.geometry?.location) {
+            resolve({
+              address: result.formatted_address || result.name || '',
+              lat: result.geometry.location.lat(),
+              lng: result.geometry.location.lng(),
               placeId: placeId,
-              fields: ['formatted_address', 'geometry', 'name', 'formatted_phone_number', 'website']
-            },
-            (result, status) => {
-              if (status === 'OK' && result) {
-                resolve({
-                  address: result.formatted_address,
-                  lat: result.geometry?.location?.lat(),
-                  lng: result.geometry?.location?.lng(),
-                  placeId: placeId,
-                  phoneNumber: result.formatted_phone_number,
-                  website: result.website
-                })
-              } else {
-                reject(new Error('Could not get place details'))
-              }
-            }
-          )
-        })
-      } else if (coordinates) {
-        // Use coordinates to get address
-        const geocoder = new google.maps.Geocoder()
-        const result = await geocoder.geocode({
-          location: { lat: coordinates.lat, lng: coordinates.lng }
-        })
-        if (result.results[0]) {
-          return {
-            address: result.results[0].formatted_address,
-            lat: coordinates.lat,
-            lng: coordinates.lng,
-            placeId: result.results[0].place_id,
-            phoneNumber: '',
-            website: ''
+              phoneNumber: result.formatted_phone_number,
+              website: result.website
+            })
+          } else {
+            reject(new Error(`Could not get place details for ID: ${placeId}. Status: ${status}`))
           }
         }
-      }
-      
-      throw new Error('Could not parse Google Maps URL')
-    } catch (error) {
-      console.error('Error parsing Google Maps URL:', error)
-      throw error
-    }
+      )
+    })
   }
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const pastedText = e.clipboardData.getData('text')
+  
+  const isGoogleMapsUrl = pastedText.includes('maps.app.goo.gl') || 
+                          pastedText.includes('google.com/maps') ||
+                          pastedText.includes('goo.gl/maps')
+  
+  if (!isGoogleMapsUrl) return
+  
+  e.preventDefault()
+  setIsParsingUrl(true)
+  setGeocodeError(null)
+  
+  try {
+    let urlToParse = pastedText
+
+    // Resolve shortened URLs server-side to avoid CORS
+    if (pastedText.includes('maps.app.goo.gl') || pastedText.includes('goo.gl/maps')) {
+      const res = await fetch(`/api/resolve-maps-url?url=${encodeURIComponent(pastedText)}`)
+      const data = await res.json()
+      if (!data.resolvedUrl) throw new Error('Could not resolve shortened URL')
+      urlToParse = data.resolvedUrl
+    }
+
+    const { placeId, lat, lng } = extractLocationFromUrl(urlToParse)
+    
+    let locationData: { 
+      address: string; lat: number; lng: number
+      placeId: string; phoneNumber?: string; website?: string 
+    } | null = null
+    
+    if (placeId) {
+      locationData = await searchByPlaceId(placeId)
+    } else if (lat && lng) {
+      const coordsData = await searchByCoordinates(lat, lng)
+      locationData = { ...coordsData }
+    } else {
+      throw new Error('Could not extract place ID or coordinates from URL')
+    }
+    
+    if (locationData) {
+      setSelectedAddress(locationData.address)
+      onLocationSelect({
+        formattedAddress: locationData.address,
+        latitude: locationData.lat,
+        longitude: locationData.lng,
+        placeId: locationData.placeId,
+        phoneNumber: locationData.phoneNumber,
+        website: locationData.website,
+      })
+      setValue(locationData.address, false)
+    }
+  } catch (error) {
+    console.error('Error parsing pasted URL:', error)
+    setGeocodeError('Could not parse Google Maps link. Please try typing the address instead.')
+    setValue(pastedText, false)
+  } finally {
+    setIsParsingUrl(false)
+  }
+}
 
   const handleSelect = async (address: string) => {
     setValue(address, false)
@@ -159,10 +210,11 @@ export function LocationPicker({ onLocationSelect, initialValue = '', error }: L
       const placeId = result.place_id
 
       // Get additional place details if available
-      let phoneNumber, website
+      let phoneNumber: string | undefined
+      let website: string | undefined
       try {
         const service = new google.maps.places.PlacesService(document.createElement('div'))
-        const details = await new Promise((resolve, reject) => {
+        const details = await new Promise<{ phoneNumber?: string; website?: string }>((resolve) => {
           service.getDetails(
             {
               placeId: placeId,
@@ -171,17 +223,17 @@ export function LocationPicker({ onLocationSelect, initialValue = '', error }: L
             (result, status) => {
               if (status === 'OK' && result) {
                 resolve({
-                  phoneNumber: result.formatted_phone_number,
-                  website: result.website
+                  phoneNumber: result.formatted_phone_number || undefined,
+                  website: result.website || undefined
                 })
               } else {
-                resolve({ phoneNumber: '', website: '' })
+                resolve({})
               }
             }
           )
         })
-        phoneNumber = (details as { phoneNumber: string }).phoneNumber
-        website = (details as { website: string }).website
+        phoneNumber = details.phoneNumber
+        website = details.website
       } catch (err) {
         console.log('Could not fetch additional details:', err)
       }
@@ -208,46 +260,6 @@ export function LocationPicker({ onLocationSelect, initialValue = '', error }: L
       })
     } finally {
       setIsGeocoding(false)
-    }
-  }
-
-  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const pastedText = e.clipboardData.getData('text')
-    
-    // Check if pasted content is a Google Maps URL
-    if (pastedText.includes('maps.app.goo.gl') || 
-        pastedText.includes('google.com/maps') ||
-        pastedText.includes('goo.gl/maps')) {
-      
-      e.preventDefault()
-      setIsParsingUrl(true)
-      setGeocodeError(null)
-      
-      try {
-        const locationData = await parseGoogleMapsUrl(pastedText)
-        if (locationData && (locationData as { address: string }).address) {
-          const data = locationData as {address: string, lat: number, lng: number, placeId: string, phoneNumber?: string, website?: string }
-          setSelectedAddress(data.address)
-          onLocationSelect({
-            formattedAddress: data.address,
-            latitude: data.lat,
-            longitude: data.lng,
-            placeId: data.placeId,
-            phoneNumber: data.phoneNumber,
-            website: data.website,
-          })
-          setValue(data.address, false)
-        } else {
-          throw new Error('Could not extract location from URL')
-        }
-      } catch (error) {
-        console.error('Error parsing pasted URL:', error)
-        setGeocodeError('Could not parse Google Maps link. Please try typing the address instead.')
-        // Allow manual entry
-        setValue(pastedText, false)
-      } finally {
-        setIsParsingUrl(false)
-      }
     }
   }
 
