@@ -1,198 +1,232 @@
 // app/api/inventory/import/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { parse } from 'csv-parse/sync';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 
+import { NextRequest, NextResponse } from 'next/server'
+import { parse } from 'csv-parse/sync'
+import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 interface CsvRecord {
-  [key: string]: string | undefined;
-}
-
-interface InventoryItem {
-  name: string;
-  category: string;
-  quantity: number;
-  price: number;
-  expiryDate?: Date;
-  batch?: string;
-  medicineId: string;
-  pharmacyId: string;
-}
-
-interface ImportResult {
-  successful: number;
-  failed: number;
-  errors: string[];
-  columns?: string[];
+  [key: string]: string | undefined
 }
 
 interface ColumnMapping {
-  name?: string;
-  batch?: string;
-  quantity?: string;
-  expiry?: string;
-  category?: string;
-  price?: string;
+  name?: string
+  batch?: string
+  quantity?: string
+  expiry?: string
+  category?: string
+  price?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user session
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    const body = await request.json();
-    const { csvData, columnMapping } = body;
-    
+    // Get user with pharmacy
+    const user = await prisma.user.findUnique({
+      where: {
+        id: session.user.id
+      },
+      include: {
+        pharmacy: true
+      }
+    })
+
+    if (!user?.pharmacyId) {
+      return NextResponse.json(
+        { error: 'User is not assigned to a pharmacy' },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json()
+
+    const { csvData, columnMapping } = body
+
     if (!csvData || typeof csvData !== 'string') {
-      return NextResponse.json({ error: 'CSV data is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'CSV data is required' },
+        { status: 400 }
+      )
     }
 
-    // Parse CSV data
     const records = parse(csvData, {
       columns: true,
       skip_empty_lines: true,
       trim: true,
       skip_records_with_error: true,
-    }) as CsvRecord[];
+    }) as CsvRecord[]
 
-    if (!records || records.length === 0) {
-      return NextResponse.json({ error: 'No valid data found in CSV' }, { status: 400 });
+    if (!records.length) {
+      return NextResponse.json(
+        { error: 'No valid records found' },
+        { status: 400 }
+      )
     }
 
-    // Get column names from the first record
-    const firstRecord = records[0];
-    const columns = firstRecord ? Object.keys(firstRecord) : [];
-
-    // Process and validate each record
-    const results: ImportResult = {
+    const results = {
       successful: 0,
       failed: 0,
-      errors: [],
-      columns,
-    };
+      errors: [] as string[],
+      columns: Object.keys(records[0] || {})
+    }
 
     for (const [index, record] of records.entries()) {
       try {
-        // Map CSV record to inventory item structure using the provided mapping
-        const inventoryItem = mapRecordToInventoryItem(record, columnMapping, session.user.id);
-        
-        // Save to database using Prisma
+        const mapped = mapRecord(record, columnMapping)
+
+        // Find or create medicine
+        let medicine = await prisma.medicine.findUnique({
+          where: {
+            name: mapped.name
+          }
+        })
+
+        if (!medicine) {
+          medicine = await prisma.medicine.create({
+            data: {
+              name: mapped.name
+            }
+          })
+        }
+
+        // Create inventory item
         await prisma.inventoryItem.create({
-          data: inventoryItem
-        });
-        
-        // Create activity log
+          data: {
+            medicineId: medicine.id,
+            pharmacyId: user.pharmacyId,
+            category: mapped.category,
+            quantity: mapped.quantity,
+            price: mapped.price,
+            expiryDate: mapped.expiryDate,
+            batch: mapped.batch
+          }
+        })
+
+        // Activity log
         await prisma.activityLog.create({
           data: {
             type: 'ADD_STOCK',
-            message: `Added ${inventoryItem.quantity} units of ${inventoryItem.name} (Batch: ${inventoryItem.batch}) via CSV import`,
-            userId: session.user.id,
+            message: `Imported ${mapped.quantity} units of ${mapped.name}`,
+            userId: user.id
           }
-        });
-        results.successful++;
-      } catch (error: unknown) {
-        results.failed++;
-        results.errors.push(`Row ${index + 2}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        })
+
+        results.successful++
+
+      } catch (error) {
+        results.failed++
+
+        results.errors.push(
+          `Row ${index + 2}: ${
+            error instanceof Error
+              ? error.message
+              : 'Unknown error'
+          }`
+        )
       }
     }
 
-    return NextResponse.json(results);
-  } catch (error: unknown) {
-    console.error('CSV import error:', error);
+    return NextResponse.json(results)
+
+  } catch (error) {
+    console.error('CSV Import Error:', error)
+
     return NextResponse.json(
-      { error: 'Failed to process CSV file: ' + (error instanceof Error ? error.message : 'Unknown error') }, 
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Internal server error'
+      },
       { status: 500 }
-    );
+    )
   }
 }
 
-function mapRecordToInventoryItem(record: CsvRecord, columnMapping?: ColumnMapping, userId?: string): InventoryItem {
-  // Helper function to get field value with better error reporting
-  const getFieldValue = (field: keyof ColumnMapping, required: boolean = false): string => {
-    // Use mapped column if provided
-    if (columnMapping && columnMapping[field]) {
-      const value = record[columnMapping[field]!];
-      if (value !== undefined && value !== null && value !== '') {
-        return value;
-      }
-    }
-    
-    // Fallback to auto-detection
-    const fieldPatterns = {
-      name: ['item_name', 'name', 'medicine', 'product', 'drug', 'item', 'medication'],
-      batch: ['variant_name', 'batch', 'batch_no', 'batch_number', 'lot', 'lot_number'],
-      quantity: ['stock', 'quantity', 'qty', 'amount', 'count'],
-      expiry: ['expirery_date', 'expiry', 'expiry_date', 'expiration', 'exp_date', 'expire'],
-      category: ['category', 'type', 'class', 'group', 'item_type'],
-      price: ['price', 'cost', 'unit_price', 'unit_cost']
-    };
-    
-    for (const pattern of fieldPatterns[field]) {
-      const value = record[pattern];
-      if (value !== undefined && value !== null && value !== '') {
-        return value;
-      }
-    }
-    
-    if (required) {
-      throw new Error(`${field} is required`);
-    }
-    
-    return '';
-  };
+function mapRecord(
+  record: CsvRecord,
+  columnMapping?: ColumnMapping
+) {
+  const getField = (
+    field: keyof ColumnMapping,
+    required = false
+  ): string => {
 
-  try {
-    // Validate required fields
-    const name = getFieldValue('name', true);
-    let batch = getFieldValue('batch', false);
-    
-    // If batch is empty, generate one from name and timestamp
-    if (!batch) {
-      const timestamp = new Date().getTime().toString(36);
-      batch = `BATCH-${name.substring(0, 3).toUpperCase()}-${timestamp.slice(-4)}`;
+    if (columnMapping?.[field]) {
+      const value = record[columnMapping[field]!]
+
+      if (value) return value
     }
-    
-    const quantityStr = getFieldValue('quantity', true);
-    const category = getFieldValue('category', true);
-    const priceStr = getFieldValue('price', true);
-    
-    const quantity = Math.max(0, Number(quantityStr) || 0);
-    if (isNaN(quantity)) {
-      throw new Error(`Invalid quantity value: ${quantityStr}`);
+
+    const patterns = {
+      name: ['name', 'medicine', 'drug', 'product', 'item'],
+      batch: ['batch', 'batch_no', 'lot'],
+      quantity: ['quantity', 'qty', 'stock'],
+      expiry: ['expiry', 'expiry_date', 'expiration'],
+      category: ['category', 'type'],
+      price: ['price', 'cost']
     }
-    
-    const price = Math.max(0, Number(priceStr) || 0);
-    if (isNaN(price)) {
-      throw new Error(`Invalid price value: ${priceStr}`);
+
+    for (const key of patterns[field]) {
+      const value = record[key]
+
+      if (value) return value
     }
-    
-    const expiry = getFieldValue('expiry');
-    let expiryDate: Date | undefined;
-    
-    if (expiry) {
-      expiryDate = new Date(expiry);
-      if (isNaN(expiryDate.getTime())) {
-        throw new Error(`Invalid expiry date format: ${expiry}`);
-      }
+
+    if (required) {
+      throw new Error(`${field} is required`)
     }
-    
-    return {
-      name,
-      category,
-      quantity,
-      price,
-      expiryDate,
-      batch,
-      medicineId: '', // Update with actual medicine lookup logic
-      pharmacyId: '', // Update with actual pharmacy lookup logic
-    };
-  } catch (error: unknown) {
-    // Add more context to the error message
-    throw new Error(`${error instanceof Error ? error.message : 'Unknown error'}. Record: ${JSON.stringify(record)}`);
+
+    return ''
+  }
+
+  const name = getField('name', true)
+  const category = getField('category', true)
+
+  const quantity = Number(getField('quantity', true))
+  const price = Number(getField('price', true))
+
+  if (isNaN(quantity)) {
+    throw new Error('Invalid quantity')
+  }
+
+  if (isNaN(price)) {
+    throw new Error('Invalid price')
+  }
+
+  let batch = getField('batch')
+
+  if (!batch) {
+    batch = `BATCH-${Date.now()}`
+  }
+
+  const expiry = getField('expiry')
+
+  let expiryDate: Date | undefined
+
+  if (expiry) {
+    expiryDate = new Date(expiry)
+
+    if (isNaN(expiryDate.getTime())) {
+      throw new Error('Invalid expiry date')
+    }
+  }
+
+  return {
+    name,
+    category,
+    quantity,
+    price,
+    batch,
+    expiryDate
   }
 }

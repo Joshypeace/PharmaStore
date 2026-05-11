@@ -317,11 +317,16 @@ export default function ImportWizard({ isOpen, onClose, onSuccess }: ImportWizar
                             <SelectValue placeholder="Select column" />
                           </SelectTrigger>
                           <SelectContent>
-                            {detectedColumns.map(column => (
-                              <SelectItem key={column} value={column}>
-                                {column}
-                              </SelectItem>
-                            ))}
+                            {detectedColumns
+                             .filter((column) => column && column.trim() !== "")
+                             .map((column, index) => (
+                               <SelectItem
+                                 key={`${column}-${index}`}
+                                 value={column}
+                               >
+                                 {column}
+                               </SelectItem>
+                             ))}
                           </SelectContent>
                         </Select>
                       </div>
