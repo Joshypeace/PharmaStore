@@ -3,74 +3,67 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  password     String
-  name         String
-  role         Role           @default(ADMIN)
-  status       UserStatus     @default(ACTIVE)
-  lastLogin    DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  logs         ActivityLog[]
-  sales        Sale[]
-  pharmacy     Pharmacy?      @relation(fields: [pharmacyId], references: [id])
-  pharmacyId   String?
+  id            String           @id @default(cuid())
+  email         String           @unique
+  password      String
+  name          String
+  role          Role             @default(ADMIN)
+  status        UserStatus       @default(ACTIVE)
+  lastLogin     DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  pharmacyId    String?
+  logs          ActivityLog[]
+  expenses      Expense[]
   prescriptions Prescription[]
-  expenses     Expense[]
-  permissions  UserPermission[]
+  sales         Sale[]
+  pharmacy      Pharmacy?        @relation(fields: [pharmacyId], references: [id])
+  permissions   UserPermission[]
 }
 
 model UserPermission {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   module    PermissionModule
-  canView   Boolean  @default(false)
-  canEdit   Boolean  @default(false)
-  canDelete Boolean  @default(false)
+  canView   Boolean          @default(false)
+  canEdit   Boolean          @default(false)
+  canDelete Boolean          @default(false)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id])
 }
 
 model Pharmacy {
-  id            String    @id @default(cuid())
-  name          String    @unique
-  licenseNumber String    @unique
-  ownerName     String
-  email         String    @unique
-  phone         String
-  location      String
-  latitude      Float
-  longitude     Float
-  placeId       String?   // For Google Maps integration
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  users         User[]
-  inventory     InventoryItem[]
-
-  BackupSettings BackupSettings[]
-  SecuritySettings SecuritySettings[]
-  AlertSettings AlertSettings[]
-  PharmacySettings PharmacySettings[]
-
-  medicineOrders MedicineOrder[]
-
-  pharmacyCommunications PharmacyCommunication[]
+  id                     String                 @id @default(cuid())
+  name                   String                 @unique
+  licenseNumber          String                 @unique
+  ownerName              String
+  email                  String                 @unique
+  phone                  String
+  location               String
+  latitude               Float
+  longitude              Float
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  placeId                String?
+  AlertSettings          AlertSettings[]
+  BackupSettings         BackupSettings[]
+  inventory              InventoryItem[]
+  medicineOrders         MedicineOrder[]
+  pharmacyCommunications PharmacyCommunication?
+  PharmacySettings       PharmacySettings[]
+  SecuritySettings       SecuritySettings[]
+  users                  User[]
 }
 
 model InventoryItem {
   id         String    @id @default(cuid())
-
   medicineId String
-  medicine   Medicine @relation(fields: [medicineId], references: [id])
-
   category   String
   quantity   Int
   price      Float
@@ -78,34 +71,30 @@ model InventoryItem {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   batch      String?
-  
   pharmacyId String
-  pharmacy   Pharmacy @relation(fields: [pharmacyId], references: [id])
- 
-
+  medicine   Medicine  @relation(fields: [medicineId], references: [id])
+  pharmacy   Pharmacy  @relation(fields: [pharmacyId], references: [id])
   sales      Sale[]
 }
 
 model Medicine {
-  id        String @id @default(cuid())
-  name      String @unique
-
-  inventory InventoryItem[]
-
+  id             String          @id @default(cuid())
+  name           String          @unique
+  inventory      InventoryItem[]
   medicineOrders MedicineOrder[]
 }
 
 model Sale {
-  id         String        @id @default(cuid())
-  itemId     String
-  quantity   Int
-  totalPrice Float
-  createdAt  DateTime      @default(now())
-  userId     String
-  item       InventoryItem @relation(fields: [itemId], references: [id])
-  soldBy     User          @relation(fields: [userId], references: [id])
-  prescriptionId String?  
+  id             String        @id @default(cuid())
+  itemId         String
+  quantity       Int
+  totalPrice     Float
+  createdAt      DateTime      @default(now())
+  userId         String
+  prescriptionId String?
+  item           InventoryItem @relation(fields: [itemId], references: [id])
   prescription   Prescription? @relation(fields: [prescriptionId], references: [id])
+  soldBy         User          @relation(fields: [userId], references: [id])
 }
 
 model ActivityLog {
@@ -118,23 +107,21 @@ model ActivityLog {
 }
 
 model Prescription {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   patientName String
   age         Int
   gender      String
   doctor      String
-  date        DateTime @default(now())
+  date        DateTime           @default(now())
   status      PrescriptionStatus @default(PENDING)
-  medications String[] 
-  imageUrl    String? 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  medications String[]
+  imageUrl    String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User               @relation(fields: [userId], references: [id])
   sales       Sale[]
 }
-
-
 
 model Expense {
   id          String   @id @default(cuid())
@@ -175,68 +162,54 @@ model AlertSettings {
 }
 
 model SecuritySettings {
-  id                  String   @id @default(cuid())
-  sessionTimeout      Int      @default(30)
-  passwordPolicy      String   @default("medium")
-  twoFactorAuth       Boolean  @default(false)
-  auditLogging        Boolean  @default(true)
-  ipRestrictions      Boolean  @default(false)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  pharmacyId          String
-  pharmacy            Pharmacy @relation(fields: [pharmacyId], references: [id])
+  id             String   @id @default(cuid())
+  sessionTimeout Int      @default(30)
+  passwordPolicy String   @default("medium")
+  twoFactorAuth  Boolean  @default(false)
+  auditLogging   Boolean  @default(true)
+  ipRestrictions Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  pharmacyId     String
+  pharmacy       Pharmacy @relation(fields: [pharmacyId], references: [id])
 }
 
 model BackupSettings {
-  id                String   @id @default(cuid())
-  backupFrequency   String   @default("daily")
-  automaticBackups  Boolean  @default(true)
-  lastBackup        DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  pharmacyId        String
-  pharmacy          Pharmacy @relation(fields: [pharmacyId], references: [id])
+  id               String    @id @default(cuid())
+  backupFrequency  String    @default("daily")
+  automaticBackups Boolean   @default(true)
+  lastBackup       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  pharmacyId       String
+  pharmacy         Pharmacy  @relation(fields: [pharmacyId], references: [id])
 }
 
-// Add these models to your existing schema
-
 model MedicineOrder {
-  id                String            @id @default(cuid())
-  orderNumber       String            @unique
-  customerName      String
-  customerPhone     String
-  customerEmail     String?
-  status            OrderStatus       @default(PENDING)
-  reservationExpiry DateTime          // When reservation expires if not collected
-  
-  // Medicine Details
-  medicineId        String
-  medicine          Medicine          @relation(fields: [medicineId], references: [id])
-  pharmacyId        String
-  pharmacy          Pharmacy          @relation(fields: [pharmacyId], references: [id])
-  quantity          Int
-  totalPrice        Float
-  
-  // Communication tracking
-  confirmedVia      ConfirmationMethod? // How order was confirmed
-  confirmedAt       DateTime?
-  confirmedBy       String?            // Staff who confirmed
-  
-  // Collection tracking
-  collectedAt       DateTime?
-  collectedBy       String?            // Staff who marked as collected
-  
-  // Notes
-  notes             String?
-  
-  // Timestamps
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  
-  // Relations
-  messages          OrderMessage[]
+  id                 String               @id @default(cuid())
+  orderNumber        String               @unique
+  customerName       String
+  customerPhone      String
+  customerEmail      String?
+  status             OrderStatus          @default(PENDING)
+  reservationExpiry  DateTime
+  medicineId         String
+  pharmacyId         String
+  quantity           Int
+  totalPrice         Float
+  confirmedVia       ConfirmationMethod?
+  confirmedAt        DateTime?
+  confirmedBy        String?
+  collectedAt        DateTime?
+  collectedBy        String?
+  notes              String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  medicine           Medicine             @relation(fields: [medicineId], references: [id])
+  pharmacy           Pharmacy             @relation(fields: [pharmacyId], references: [id])
+  messages           OrderMessage[]
   reservationHistory ReservationHistory[]
-  
+
   @@index([pharmacyId, status])
   @@index([medicineId, status])
   @@index([orderNumber])
@@ -244,59 +217,52 @@ model MedicineOrder {
 }
 
 model OrderMessage {
-  id            String   @id @default(cuid())
-  orderId       String
-  order         MedicineOrder @relation(fields: [orderId], references: [id])
-  message       String
-  isFromCustomer Boolean  @default(false)
-  isFromPharmacy Boolean  @default(false)
-  read          Boolean  @default(false)
-  readAt        DateTime?
-  createdAt     DateTime @default(now())
-  
+  id             String        @id @default(cuid())
+  orderId        String
+  message        String
+  isFromCustomer Boolean       @default(false)
+  isFromPharmacy Boolean       @default(false)
+  read           Boolean       @default(false)
+  readAt         DateTime?
+  createdAt      DateTime      @default(now())
+  order          MedicineOrder @relation(fields: [orderId], references: [id])
+
   @@index([orderId, createdAt])
 }
 
 model ReservationHistory {
-  id            String   @id @default(cuid())
-  orderId       String
-  order         MedicineOrder @relation(fields: [orderId], references: [id])
-  status        OrderStatus
-  notes         String?
-  changedBy     String
-  changedAt     DateTime @default(now())
-  
+  id        String        @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  notes     String?
+  changedBy String
+  changedAt DateTime      @default(now())
+  order     MedicineOrder @relation(fields: [orderId], references: [id])
+
   @@index([orderId])
 }
 
 model PharmacyCommunication {
-  id            String   @id @default(cuid())
-  pharmacyId    String
-  pharmacy      Pharmacy @relation(fields: [pharmacyId], references: [id])
-  
-  // Contact preferences
-  whatsappNumber String?
-  autoConfirmOrders Boolean @default(false)
-  reservationDuration Int @default(120) // Minutes to hold reservation
-  
-  // Notification settings
-  emailNotifications Boolean @default(true)
-  smsNotifications Boolean @default(false)
-  inAppNotifications Boolean @default(true)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  @@unique([pharmacyId])
+  id                  String   @id @default(cuid())
+  pharmacyId          String   @unique
+  whatsappNumber      String?
+  autoConfirmOrders   Boolean  @default(false)
+  reservationDuration Int      @default(120)
+  emailNotifications  Boolean  @default(true)
+  smsNotifications    Boolean  @default(false)
+  inAppNotifications  Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  pharmacy            Pharmacy @relation(fields: [pharmacyId], references: [id])
 }
 
 enum OrderStatus {
-  PENDING          // Awaiting pharmacy confirmation
-  CONFIRMED        // Pharmacy confirmed, medicine reserved
-  READY_FOR_COLLECTION // Customer can collect
-  COLLECTED        // Customer picked up
-  CANCELLED        // Order cancelled
-  EXPIRED          // Reservation expired
+  PENDING
+  CONFIRMED
+  READY_FOR_COLLECTION
+  COLLECTED
+  CANCELLED
+  EXPIRED
 }
 
 enum ConfirmationMethod {
@@ -306,9 +272,6 @@ enum ConfirmationMethod {
   IN_APP
   EMAIL
 }
-
-
-
 
 enum ExpenseCategory {
   SALARIES
@@ -320,7 +283,6 @@ enum ExpenseCategory {
   LICENSES
   OTHER
 }
-
 
 enum PrescriptionStatus {
   PENDING
