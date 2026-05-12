@@ -25,20 +25,27 @@ export async function GET(request: NextRequest) {
     })
 
     if (medicines.length === 0) {
-      console.log('No medicine found with name:', medicineName)
       return NextResponse.json({ pharmacies: [], medicine: null })
     }
 
-    // Get the first matching medicine
-    const medicine = medicines[0]
-    console.log('Found medicine:', medicine.name)
+    const medicineIds = medicines.map(m => m.id)
 
-    // Find all inventory items with this medicine that have stock
+    // Use UTC date for comparison to avoid timezone issues
+    const nowUTC = new Date()
+    // Set to UTC midnight to be safe
+    const todayUTC = new Date(Date.UTC(
+      nowUTC.getUTCFullYear(),
+      nowUTC.getUTCMonth(),
+      nowUTC.getUTCDate()
+    ))
+
+    console.log('Current UTC date for comparison:', todayUTC.toISOString())
+
     const inventoryItems = await prisma.inventoryItem.findMany({
       where: {
-        medicineId: medicine.id,
+        medicineId: { in: medicineIds },
         quantity: { gt: 0 },
-        expiryDate: { gt: new Date() }
+        expiryDate: { gt: todayUTC }
       },
       include: {
         pharmacy: true,
@@ -48,7 +55,30 @@ export async function GET(request: NextRequest) {
 
     console.log(`Found ${inventoryItems.length} inventory items with stock`)
 
-    // Calculate distances and prepare response
+    if (inventoryItems.length === 0) {
+      // Check if there are items with quantity but expired
+      const expiredItems = await prisma.inventoryItem.findMany({
+        where: {
+          medicineId: { in: medicineIds },
+          quantity: { gt: 0 },
+          expiryDate: { lte: todayUTC }
+        },
+        include: {
+          medicine: true,
+          pharmacy: true
+        }
+      })
+      
+      if (expiredItems.length > 0) {
+        console.log(`Found ${expiredItems.length} expired items that would have been in stock`)
+        return NextResponse.json({ 
+          pharmacies: [], 
+          medicine: medicines[0].name,
+          message: `Medicine found but all stock has expired. Last expiry: ${expiredItems[0].expiryDate}` 
+        })
+      }
+    }
+
     const pharmacies = inventoryItems.map(item => {
       const distance = calculateDistance(
         userLat, userLng,
@@ -75,7 +105,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ 
       pharmacies, 
-      medicine: medicine.name,
+      medicine: medicines[0].name,
       total: pharmacies.length 
     })
     
@@ -88,11 +118,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Haversine formula to calculate distance between two coordinates in kilometers
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  if (lat1 === 0 && lon1 === 0) return 999 // No user location
+  if (lat1 === 0 && lon1 === 0) return 999
+  if (lat2 === 0 && lon2 === 0) return 999
   
-  const R = 6371 // Earth's radius in km
+  const R = 6371
   const dLat = toRad(lat2 - lat1)
   const dLon = toRad(lon2 - lon1)
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -108,7 +138,6 @@ function toRad(degrees: number): number {
 
 function calculateDuration(distanceKm: number): string {
   if (distanceKm === 999) return 'Distance unknown'
-  // Average driving speed in city: 30 km/h
   const minutes = Math.round((distanceKm / 30) * 60)
   if (minutes < 60) return `${minutes} min drive`
   const hours = Math.floor(minutes / 60)
