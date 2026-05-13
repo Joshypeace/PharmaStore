@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
 import { Clock, CheckCircle, XCircle, Package, MessageCircle, Phone } from 'lucide-react'
 import { JSX } from 'react/jsx-runtime'
+import Sidebar from '@/components/layout/sidebar'
+import Header from '@/components/layout/header'
 
 interface Order {
   id: string
@@ -147,6 +149,12 @@ export default function PharmacyOrdersPage() {
   }
 
   return (
+     <div className="flex h-screen bg-gray-50">
+          <Sidebar />
+          <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+            <Header />
+            <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
+    
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Order Management</h1>
       
@@ -218,6 +226,9 @@ export default function PharmacyOrdersPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </main>
+  </div>
+</div>
   )
 }
 
