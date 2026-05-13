@@ -421,7 +421,8 @@ export default function SearchPage() {
               ) : (
                 <div className="grid gap-5">
                   {searchResults.map((pharmacy, index) => (
-                    <Card key={pharmacy.id} className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
+                    //had to set the key as the index just check the schema for duplicate entries 
+                    <Card key={index} className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                           {/* Left - Pharmacy Info */}
