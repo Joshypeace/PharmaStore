@@ -43,7 +43,7 @@ export default function PharmacyOrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/pharmacy/orders')
+      const response = await fetch('/api/orders')
       const data = await response.json()
       if (response.ok) {
         setOrders(data.orders)
@@ -57,7 +57,7 @@ export default function PharmacyOrdersPage() {
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
-      const response = await fetch('/api/pharmacy/update-order-status', {
+      const response = await fetch('/api/update-order-status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, status })
@@ -80,7 +80,7 @@ export default function PharmacyOrdersPage() {
 
   const updateInventoryAfterCollection = async (orderId: string) => {
     try {
-      const response = await fetch('/api/pharmacy/deduct-inventory', {
+      const response = await fetch('/api/deduct-inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId })
@@ -99,7 +99,7 @@ export default function PharmacyOrdersPage() {
     
     setSendingMessage(true)
     try {
-      const response = await fetch('/api/pharmacy/send-order-message', {
+      const response = await fetch('/api/send-order-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, message })
