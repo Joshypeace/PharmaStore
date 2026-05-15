@@ -59,7 +59,7 @@ export default function PharmacyOrdersPage() {
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
-      const response = await fetch('/api/update-order-status', {
+      const response = await fetch('/api/orders/update-order-status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, status })
@@ -82,7 +82,7 @@ export default function PharmacyOrdersPage() {
 
   const updateInventoryAfterCollection = async (orderId: string) => {
     try {
-      const response = await fetch('/api/deduct-inventory', {
+      const response = await fetch('/api/orders/deduct-inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId })
