@@ -109,7 +109,7 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-semibold">{userName}</span>
-                  <span className="text-xs text-slate-500">7 days trial left</span>
+                  {/* <span className="text-xs text-slate-500">7 days trial left</span> */}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -151,10 +151,10 @@ export default function Header() {
               </div>
               <div>
                 <p className="font-semibold text-slate-900">{userName}</p>
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs mt-1">
+                {/* <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs mt-1">
                   <Crown className="h-3 w-3 mr-1" />
                   7 days trial
-                </Badge>
+                </Badge> */}
               </div>
             </div>
             
@@ -165,12 +165,12 @@ export default function Header() {
                   Profile
                 </Button>
               </Link>
-              <Link href="/billing" onClick={() => setIsMobileMenuOpen(false)}>
+              {/* <Link href="/billing" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button variant="outline" className="w-full justify-start">
                   <CreditCard className="h-4 w-4 mr-2" />
                   Billing
                 </Button>
-              </Link>
+              </Link> */}
               <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button variant="outline" className="w-full justify-start">
                   <Settings className="h-4 w-4 mr-2" />
