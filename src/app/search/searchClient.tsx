@@ -103,10 +103,10 @@ export default function SearchPage() {
     if (saved) {
       try {
         const convos = JSON.parse(saved)
-        setConversations(convos.map((c: any) => ({
+        setConversations(convos.map((c: { pharmacyId: string; pharmacyName: string; messages: any[]; lastMessageTime: string }) => ({
           ...c,
           lastMessageTime: new Date(c.lastMessageTime),
-          messages: c.messages.map((m: any) => ({
+          messages: c.messages.map((m: { id: string; message: string; isFromPharmacy: boolean; createdAt: string; timestamp: string }) => ({
             ...m,
             timestamp: new Date(m.timestamp)
           }))
@@ -222,7 +222,7 @@ export default function SearchPage() {
       if (response.ok) {
         const data = await response.json()
         if (data.messages && data.messages.length > 0) {
-          const updatedMessages = data.messages.map((msg: any) => ({
+          const updatedMessages = data.messages.map((msg: { id: string; message: string; isFromPharmacy: boolean; createdAt: string }) => ({
             id: msg.id,
             text: msg.message,
             isFromUser: !msg.isFromPharmacy,
