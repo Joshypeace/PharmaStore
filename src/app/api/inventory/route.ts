@@ -126,3 +126,52 @@ function getItemStatus(quantity: number, expiryDate: Date | null): string {
 
   return 'In Stock'
 }
+
+// DELETE inventory item
+export async function DELETE(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: 'Item ID is required' }, { status: 400 })
+  }
+
+  try {
+    // Optional: check if item exists
+    const existingItem = await prisma.inventoryItem.findUnique({
+      where: { id },
+      include: { medicine: true },
+    })
+
+    if (!existingItem) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+    }
+
+    // Delete item
+    await prisma.inventoryItem.delete({
+      where: { id },
+    })
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        type: 'DELETE_STOCK',
+        message: `Deleted inventory item: ${existingItem.medicine.name}`,
+        userId: session.user.id,
+      },
+    })
+
+    return NextResponse.json({ message: 'Item deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting item:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete inventory item' },
+      { status: 500 }
+    )
+  }
+}
