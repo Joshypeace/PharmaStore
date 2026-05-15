@@ -122,7 +122,7 @@ export default function InventoryPage() {
 
   const handleDeleteItem = async (id: string) => {
     try {
-      const response = await fetch(`/api/inventory/${id}`, {
+      const response = await fetch(`/api/inventory?id=${id}`, {
         method: 'DELETE',
       })
 
@@ -403,9 +403,9 @@ export default function InventoryPage() {
                           <TableCell>{getStatusBadge(item.status, item.quantity)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="icon">
+                              {/* <Button variant="ghost" size="icon">
                                 <Edit className="h-4 w-4" />
-                              </Button>
+                              </Button> */}
                               <Button
                                 variant="ghost"
                                 size="icon"
