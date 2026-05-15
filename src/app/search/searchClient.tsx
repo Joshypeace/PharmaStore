@@ -12,16 +12,15 @@ import {
   MessageCircle, 
   CheckCircle, 
   AlertCircle,
-  X,
   TrendingUp,
   Phone,
   Mail,
   Star,
-  ChevronRight,
   Loader2,
   Package,
-  Store,
-  WifiOff
+  WifiOff,
+  Send,
+  MessageSquare
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,9 +29,8 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/components/ui/use-toast'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface Pharmacy {
   id: string
@@ -48,6 +46,20 @@ interface Pharmacy {
   distance?: number
   duration?: string
   rating?: number
+}
+
+interface Message {
+  id: string
+  text: string
+  isFromUser: boolean
+  timestamp: Date
+}
+
+interface Conversation {
+  pharmacyId: string
+  pharmacyName: string
+  messages: Message[]
+  lastMessageTime: Date
 }
 
 interface SearchHistory {
@@ -68,6 +80,10 @@ export default function SearchPage() {
   const [locationPermissionDenied, setLocationPermissionDenied] = useState(false)
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([])
   const [trendingSearches] = useState(['Paracetamol', 'Amoxicillin', 'Vitamin C', 'Ibuprofen', 'Metformin'])
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
+  const [newMessage, setNewMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
   
   // Order form state
   const [selectedPharmacy, setSelectedPharmacy] = useState<Pharmacy | null>(null)
@@ -81,22 +97,156 @@ export default function SearchPage() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState<{ orderNumber: string; message: string } | null>(null)
 
-  // Load search history from localStorage
+  // Load conversations from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('medicineSearchHistory')
+    const saved = localStorage.getItem('pharmacyConversations')
     if (saved) {
       try {
-        const history = JSON.parse(saved)
+        const convos = JSON.parse(saved)
+        setConversations(convos.map((c: any) => ({
+          ...c,
+          lastMessageTime: new Date(c.lastMessageTime),
+          messages: c.messages.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp)
+          }))
+        })))
+      } catch (e) {}
+    }
+    
+    const savedHistory = localStorage.getItem('medicineSearchHistory')
+    if (savedHistory) {
+      try {
+        const history = JSON.parse(savedHistory)
         setSearchHistory(history.slice(0, 5))
       } catch (e) {}
     }
   }, [])
+
+  // Save conversations to localStorage
+  const saveConversations = (conversations: Conversation[]) => {
+    localStorage.setItem('pharmacyConversations', JSON.stringify(conversations))
+  }
 
   // Save search to history
   const saveToHistory = (term: string) => {
     const newHistory = [{ term, timestamp: Date.now() }, ...searchHistory.filter(h => h.term !== term)].slice(0, 5)
     setSearchHistory(newHistory)
     localStorage.setItem('medicineSearchHistory', JSON.stringify(newHistory))
+  }
+
+  // Send message to pharmacy
+  const sendMessageToPharmacy = async (pharmacyId: string, message: string) => {
+    if (!message.trim()) return
+    
+    setSendingMessage(true)
+    try {
+      const response = await fetch('/api/public/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pharmacyId, message })
+      })
+      
+      if (!response.ok) throw new Error('Failed to send message')
+      
+      const data = await response.json()
+      
+      // Update local conversation
+      const updatedConversations = conversations.map(conv => {
+        if (conv.pharmacyId === pharmacyId) {
+          const newMessages = [...conv.messages, {
+            id: data.messageId || Date.now().toString(),
+            text: message,
+            isFromUser: true,
+            timestamp: new Date()
+          }]
+          return {
+            ...conv,
+            messages: newMessages,
+            lastMessageTime: new Date()
+          }
+        }
+        return conv
+      })
+      
+      setConversations(updatedConversations)
+      saveConversations(updatedConversations)
+      
+      // Update active conversation
+      if (activeConversation?.pharmacyId === pharmacyId) {
+        setActiveConversation({
+          ...activeConversation,
+          messages: [...activeConversation.messages, {
+            id: data.messageId || Date.now().toString(),
+            text: message,
+            isFromUser: true,
+            timestamp: new Date()
+          }],
+          lastMessageTime: new Date()
+        })
+      }
+      
+      toast({ title: 'Message Sent', description: 'Your message has been sent to the pharmacy' })
+      setNewMessage('')
+    } catch (error) {
+      console.error('Error sending message:', error)
+      toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' })
+    } finally {
+      setSendingMessage(false)
+    }
+  }
+
+  // Open conversation with pharmacy
+  const openConversation = async (pharmacy: Pharmacy) => {
+    // Check if conversation exists
+    let conversation = conversations.find(c => c.pharmacyId === pharmacy.id)
+    
+    if (!conversation) {
+      // Create new conversation
+      conversation = {
+        pharmacyId: pharmacy.id,
+        pharmacyName: pharmacy.name,
+        messages: [],
+        lastMessageTime: new Date()
+      }
+      const updatedConversations = [...conversations, conversation]
+      setConversations(updatedConversations)
+      saveConversations(updatedConversations)
+    }
+    
+    setActiveConversation(conversation)
+    
+    // Fetch message history from server
+    try {
+      const response = await fetch(`/api/public/get-messages?pharmacyId=${pharmacy.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.messages && data.messages.length > 0) {
+          const updatedMessages = data.messages.map((msg: any) => ({
+            id: msg.id,
+            text: msg.message,
+            isFromUser: !msg.isFromPharmacy,
+            timestamp: new Date(msg.createdAt)
+          }))
+          
+          const updatedConversation = {
+            ...conversation,
+            messages: updatedMessages,
+            lastMessageTime: new Date()
+          }
+          
+          setActiveConversation(updatedConversation)
+          
+          const updatedConversationsList = conversations.map(c => 
+            c.pharmacyId === pharmacy.id ? updatedConversation : c
+          )
+          setConversations(updatedConversationsList)
+          saveConversations(updatedConversationsList)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+    }
   }
 
   // Get user location
@@ -171,7 +321,6 @@ export default function SearchPage() {
           description: `${data.pharmacies.length} pharmacy(s) have ${query} in stock`
         })
         saveToHistory(query)
-        // Update URL without reload
         router.replace(`/search?q=${encodeURIComponent(query)}`, { scroll: false })
       }
     } catch (error) {
@@ -205,7 +354,13 @@ export default function SearchPage() {
 
   const openOrderDialog = (pharmacy: Pharmacy) => {
     setSelectedPharmacy(pharmacy)
-    setOrderForm({ ...orderForm, quantity: 1, customerName: '', customerPhone: '', customerEmail: '', notes: '' })
+    setOrderForm({ 
+      customerName: '', 
+      customerPhone: '', 
+      customerEmail: '', 
+      quantity: 1, 
+      notes: '' 
+    })
     setOrderSuccess(null)
   }
 
@@ -252,7 +407,6 @@ export default function SearchPage() {
         description: `Your order #${data.orderNumber} has been placed successfully.`
       })
       
-      // Reset form after 3 seconds
       setTimeout(() => {
         setSelectedPharmacy(null)
         setOrderSuccess(null)
@@ -269,34 +423,6 @@ export default function SearchPage() {
   const openDirections = (pharmacy: Pharmacy) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${pharmacy.latitude},${pharmacy.longitude}`)
   }
-
-  const sendWhatsAppMessage = (pharmacy: Pharmacy) => {
-    const message = `Hello, I'm interested in ${searchTerm} at your pharmacy.`
-    window.open(`https://wa.me/${pharmacy.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`)
-  }
-
-  // Render loading skeleton
-  const renderSkeleton = () => (
-    <div className="space-y-4">
-      {[1, 2, 3].map(i => (
-        <Card key={i}>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-5 w-20" />
-            </div>
-            <Skeleton className="h-4 w-64 mb-3" />
-            <Skeleton className="h-4 w-40 mb-4" />
-            <div className="flex gap-3">
-              <Skeleton className="h-10 w-24" />
-              <Skeleton className="h-10 w-24" />
-              <Skeleton className="h-10 w-24" />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
@@ -358,47 +484,6 @@ export default function SearchPage() {
             </div>
           )}
 
-          {/* Search History */}
-          {!hasSearched && searchHistory.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-1">
-                <Clock className="h-4 w-4" /> Recent Searches
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {searchHistory.map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleQuickSearch(item.term)}
-                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm transition-colors"
-                  >
-                    {item.term}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Trending Section */}
-          {!hasSearched && (
-            <div className="mb-8">
-              <h3 className="text-sm font-medium text-gray-600 mb-3 flex items-center gap-1">
-                <TrendingUp className="h-4 w-4" /> Trending Medicines
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {trendingSearches.map(term => (
-                  <button
-                    key={term}
-                    onClick={() => handleQuickSearch(term)}
-                    className="p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all text-center group"
-                  >
-                    <Pill className="h-6 w-6 mx-auto text-emerald-500 mb-2 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-medium text-gray-700">{term}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Results Section */}
           {hasSearched && (
             <>
@@ -416,187 +501,245 @@ export default function SearchPage() {
                 )}
               </div>
 
-              {isSearching ? (
-                renderSkeleton()
-              ) : (
-                <div className="grid gap-5">
-                  {searchResults.map((pharmacy, index) => (
-                    //had to set the key as the index just check the schema for duplicate entries 
-                    <Card key={index} className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
-                      <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                          {/* Left - Pharmacy Info */}
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-2">
-                              <div>
-                                <h3 className="text-lg font-semibold text-gray-900">{pharmacy.name}</h3>
-                                {pharmacy.rating && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-sm text-gray-600">{pharmacy.rating}</span>
-                                  </div>
-                                )}
-                              </div>
-                              <Badge className="bg-emerald-100 text-emerald-700">
-                                <Package className="h-3 w-3 mr-1" /> In Stock
-                              </Badge>
-                            </div>
-                            
-                            <div className="space-y-2 mt-3">
-                              <div className="flex items-start gap-2 text-gray-600">
-                                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm">{pharmacy.location}</span>
-                              </div>
-                              
-                              <div className="flex flex-wrap items-center gap-4 text-sm">
-                                {pharmacy.distance !== undefined && (
-                                  <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                                    <Navigation className="h-3.5 w-3.5" />
-                                    <span>{pharmacy.distance.toFixed(1)} km away</span>
-                                  </div>
-                                )}
-                                {pharmacy.duration && (
-                                  <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    <span>{pharmacy.duration}</span>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="flex items-center justify-between pt-2 border-t mt-2">
-                                <div className="flex items-baseline gap-1">
-                                  <DollarSign className="h-4 w-4 text-emerald-600" />
-                                  <span className="text-2xl font-bold text-emerald-600">
-                                    MWK {pharmacy.price.toLocaleString()}
-                                  </span>
-                                  <span className="text-sm text-gray-500">per unit</span>
+              <div className="grid gap-5">
+                {searchResults.map((pharmacy, index) => (
+                  <Card key={index} className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
+                    <CardContent className="p-6">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        {/* Left - Pharmacy Info */}
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900">{pharmacy.name}</h3>
+                              {pharmacy.rating && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-sm text-gray-600">{pharmacy.rating}</span>
                                 </div>
-                                <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
-                                  {pharmacy.quantity} units available
-                                </div>
-                              </div>
+                              )}
                             </div>
+                            <Badge className="bg-emerald-100 text-emerald-700">
+                              <Package className="h-3 w-3 mr-1" /> In Stock
+                            </Badge>
                           </div>
-
-                          {/* Right - Actions */}
-                          <div className="flex flex-col gap-2 min-w-[200px]">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button onClick={() => openOrderDialog(pharmacy)} className="bg-emerald-600 hover:bg-emerald-700 w-full">
-                                  Order Now
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-md">
-                                {orderSuccess ? (
-                                  <div className="text-center py-8">
-                                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                                    <h3 className="text-xl font-semibold mb-2">Order Placed!</h3>
-                                    <p className="text-gray-600 mb-2">Order #{orderSuccess.orderNumber}</p>
-                                    <p className="text-sm text-gray-500">{orderSuccess.message}</p>
-                                    <Button onClick={() => setSelectedPharmacy(null)} className="mt-6">
-                                      Close
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <DialogHeader>
-                                      <DialogTitle>Order {searchTerm}</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4">
-                                      <div className="bg-gray-50 p-4 rounded-lg">
-                                        <p className="font-medium">{selectedPharmacy?.name}</p>
-                                        <p className="text-sm text-gray-600 mt-1">
-                                          Price: MWK {selectedPharmacy?.price.toLocaleString()} per unit
-                                        </p>
-                                      </div>
-                                      
-                                      <div className="space-y-2">
-                                        <Label>Your Name *</Label>
-                                        <Input
-                                          value={orderForm.customerName}
-                                          onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
-                                          placeholder="Full name"
-                                        />
-                                      </div>
-                                      
-                                      <div className="space-y-2">
-                                        <Label>Phone Number *</Label>
-                                        <Input
-                                          value={orderForm.customerPhone}
-                                          onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
-                                          placeholder="WhatsApp number for updates"
-                                        />
-                                      </div>
-                                      
-                                      <div className="space-y-2">
-                                        <Label>Email (Optional)</Label>
-                                        <Input
-                                          type="email"
-                                          value={orderForm.customerEmail}
-                                          onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
-                                          placeholder="email@example.com"
-                                        />
-                                      </div>
-                                      
-                                      <div className="space-y-2">
-                                        <Label>Quantity *</Label>
-                                        <Input
-                                          type="number"
-                                          min="1"
-                                          max={selectedPharmacy?.quantity}
-                                          value={orderForm.quantity}
-                                          onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
-                                        />
-                                        <p className="text-xs text-gray-500">Max available: {selectedPharmacy?.quantity}</p>
-                                      </div>
-                                      
-                                      <div className="space-y-2">
-                                        <Label>Notes (Optional)</Label>
-                                        <Textarea
-                                          value={orderForm.notes}
-                                          onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
-                                          placeholder="Any special instructions"
-                                          rows={2}
-                                        />
-                                      </div>
-                                      
-                                      <div className="rounded-lg bg-emerald-50 p-3">
-                                        <div className="flex justify-between text-sm">
-                                          <span className="text-gray-600">Total:</span>
-                                          <span className="font-bold text-emerald-700">
-                                            MWK {((selectedPharmacy?.price || 0) * orderForm.quantity).toLocaleString()}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      
-                                      <Button onClick={placeOrder} disabled={isPlacingOrder} className="w-full">
-                                        {isPlacingOrder ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                        {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
-                                      </Button>
-                                      
-                                      <p className="text-xs text-gray-500 text-center">
-                                        {`The pharmacy will confirm availability. You'll receive updates on WhatsApp.`}
-                                      </p>
-                                    </div>
-                                  </>
-                                )}
-                              </DialogContent>
-                            </Dialog>
+                          
+                          <div className="space-y-2 mt-3">
+                            <div className="flex items-start gap-2 text-gray-600">
+                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">{pharmacy.location}</span>
+                            </div>
                             
-                            <Button onClick={() => openDirections(pharmacy)} variant="outline" className="w-full">
-                              <Navigation className="mr-2 h-4 w-4" /> Directions
-                            </Button>
+                            <div className="flex flex-wrap items-center gap-4 text-sm">
+                              {pharmacy.distance !== undefined && (
+                                <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                                  <Navigation className="h-3.5 w-3.5" />
+                                  <span>{pharmacy.distance.toFixed(1)} km away</span>
+                                </div>
+                              )}
+                              {pharmacy.duration && (
+                                <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  <span>{pharmacy.duration}</span>
+                                </div>
+                              )}
+                            </div>
                             
-                            <Button onClick={() => sendWhatsAppMessage(pharmacy)} variant="outline" className="w-full">
-                              <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
-                            </Button>
+                            <div className="flex items-center justify-between pt-2 border-t mt-2">
+                              <div className="flex items-baseline gap-1">
+                                <DollarSign className="h-4 w-4 text-emerald-600" />
+                                <span className="text-2xl font-bold text-emerald-600">
+                                  MWK {pharmacy.price.toLocaleString()}
+                                </span>
+                                <span className="text-sm text-gray-500">per unit</span>
+                              </div>
+                              <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
+                                {pharmacy.quantity} units available
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+
+                        {/* Right - Actions */}
+                        <div className="flex flex-col gap-2 min-w-[200px]">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button onClick={() => openOrderDialog(pharmacy)} className="bg-emerald-600 hover:bg-emerald-700 w-full">
+                                Order Now
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              {orderSuccess ? (
+                                <div className="text-center py-8">
+                                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                                  <h3 className="text-xl font-semibold mb-2">Order Placed!</h3>
+                                  <p className="text-gray-600 mb-2">Order #{orderSuccess.orderNumber}</p>
+                                  <p className="text-sm text-gray-500">{orderSuccess.message}</p>
+                                  <Button onClick={() => setSelectedPharmacy(null)} className="mt-6">
+                                    Close
+                                  </Button>
+                                </div>
+                              ) : (
+                                <>
+                                  <DialogHeader>
+                                    <DialogTitle>Order {searchTerm}</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                      <p className="font-medium">{selectedPharmacy?.name}</p>
+                                      <p className="text-sm text-gray-600 mt-1">
+                                        Price: MWK {selectedPharmacy?.price.toLocaleString()} per unit
+                                      </p>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <Label>Your Name *</Label>
+                                      <Input
+                                        value={orderForm.customerName}
+                                        onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
+                                        placeholder="Full name"
+                                      />
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <Label>Phone Number *</Label>
+                                      <Input
+                                        value={orderForm.customerPhone}
+                                        onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
+                                        placeholder="Phone number for updates"
+                                      />
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <Label>Email (Optional)</Label>
+                                      <Input
+                                        type="email"
+                                        value={orderForm.customerEmail}
+                                        onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
+                                        placeholder="email@example.com"
+                                      />
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <Label>Quantity *</Label>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        max={selectedPharmacy?.quantity}
+                                        value={orderForm.quantity}
+                                        onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
+                                      />
+                                      <p className="text-xs text-gray-500">Max available: {selectedPharmacy?.quantity}</p>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <Label>Notes (Optional)</Label>
+                                      <Textarea
+                                        value={orderForm.notes}
+                                        onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
+                                        placeholder="Any special instructions"
+                                        rows={2}
+                                      />
+                                    </div>
+                                    
+                                    <div className="rounded-lg bg-emerald-50 p-3">
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Total:</span>
+                                        <span className="font-bold text-emerald-700">
+                                          MWK {((selectedPharmacy?.price || 0) * orderForm.quantity).toLocaleString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    
+                                    <Button onClick={placeOrder} disabled={isPlacingOrder} className="w-full">
+                                      {isPlacingOrder ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                      {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+                                    </Button>
+                                  </div>
+                                </>
+                              )}
+                            </DialogContent>
+                          </Dialog>
+                          
+                          <Button onClick={() => openDirections(pharmacy)} variant="outline" className="w-full">
+                            <Navigation className="mr-2 h-4 w-4" /> Directions
+                          </Button>
+                          
+                          {/* In-App Message Button */}
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                onClick={() => openConversation(pharmacy)} 
+                                variant="outline" 
+                                className="w-full"
+                              >
+                                <MessageCircle className="mr-2 h-4 w-4" /> Message Pharmacy
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Chat with {activeConversation?.pharmacyName || pharmacy.name}</DialogTitle>
+                              </DialogHeader>
+                              <div className="flex flex-col h-[400px]">
+                                <ScrollArea className="flex-1 pr-4">
+                                  <div className="space-y-4">
+                                    {activeConversation?.messages.map((msg) => (
+                                      <div
+                                        key={msg.id}
+                                        className={`flex ${msg.isFromUser ? 'justify-end' : 'justify-start'}`}
+                                      >
+                                        <div
+                                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                                            msg.isFromUser
+                                              ? 'bg-emerald-500 text-white'
+                                              : 'bg-gray-100 text-gray-900'
+                                          }`}
+                                        >
+                                          <p className="text-sm">{msg.text}</p>
+                                          <p className={`text-xs mt-1 ${
+                                            msg.isFromUser ? 'text-emerald-100' : 'text-gray-500'
+                                          }`}>
+                                            {msg.timestamp.toLocaleTimeString()}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {(!activeConversation?.messages || activeConversation.messages.length === 0) && (
+                                      <div className="text-center text-gray-500 py-8">
+                                        <MessageSquare className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                                        <p>No messages yet</p>
+                                        <p className="text-sm">Send a message to the pharmacy</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </ScrollArea>
+                                <div className="flex gap-2 mt-4">
+                                  <Input
+                                    placeholder="Type your message..."
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter' && !sendingMessage && newMessage.trim()) {
+                                        sendMessageToPharmacy(pharmacy.id, newMessage)
+                                      }
+                                    }}
+                                  />
+                                  <Button
+                                    onClick={() => sendMessageToPharmacy(pharmacy.id, newMessage)}
+                                    disabled={sendingMessage || !newMessage.trim()}
+                                    size="icon"
+                                  >
+                                    {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
               {!isSearching && searchResults.length === 0 && hasSearched && (
                 <div className="text-center py-16">
