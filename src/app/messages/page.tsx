@@ -34,6 +34,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from '@/components/ui/use-toast'
 import { formatDistanceToNow } from 'date-fns'
+import Sidebar from '@/components/layout/sidebar'
+import Header from '@/components/layout/header'
+
 
 interface Conversation {
   id: string
@@ -212,16 +215,31 @@ export default function PharmacyMessagesPage() {
 
   if (loading) {
     return (
+         <div className="flex h-screen bg-gray-100">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
+
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-emerald-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading messages...</p>
         </div>
       </div>
+        </main>
+        </div>
+        </div>
     )
   }
 
   return (
+    <div className="flex h-screen bg-gray-100">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
+
     
     <div className="h-screen flex flex-col bg-gray-100">
       {/* Header */}
@@ -451,5 +469,8 @@ export default function PharmacyMessagesPage() {
         )}
       </div>
     </div>
+    </main>
+        </div>
+        </div>
   )
 }
