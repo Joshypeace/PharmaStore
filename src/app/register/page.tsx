@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Pill, ArrowLeft, Shield, CheckCircle, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Pill, ArrowLeft, Shield, CheckCircle, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,6 +22,19 @@ interface LocationData {
   placeId: string
 }
 
+interface PasswordStrength {
+  score: number // 0-4
+  message: string
+  color: string
+  requirements: {
+    length: boolean
+    uppercase: boolean
+    lowercase: boolean
+    number: boolean
+    special: boolean
+  }
+}
+
 export default function RegisterPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
@@ -30,6 +43,18 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [locationData, setLocationData] = useState<LocationData | null>(null)
   const [locationError, setLocationError] = useState<string>("")
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
+    score: 0,
+    message: "Enter a password",
+    color: "bg-gray-200",
+    requirements: {
+      length: false,
+      uppercase: false,
+      lowercase: false,
+      number: false,
+      special: false,
+    },
+  })
   
   const [formData, setFormData] = useState({
     pharmacyName: "",
@@ -45,6 +70,56 @@ export default function RegisterPage() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    
+    // Check password strength when password changes
+    if (field === "password") {
+      checkPasswordStrength(value as string)
+    }
+  }
+
+  const checkPasswordStrength = (password: string) => {
+    const requirements = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    }
+
+    const metCount = Object.values(requirements).filter(Boolean).length
+    
+    let score = 0
+    let message = ""
+    let color = ""
+
+    if (password.length === 0) {
+      score = 0
+      message = "Enter a password"
+      color = "bg-gray-200"
+    } else if (metCount <= 2) {
+      score = 1
+      message = "Weak password"
+      color = "bg-red-500"
+    } else if (metCount === 3) {
+      score = 2
+      message = "Fair password"
+      color = "bg-yellow-500"
+    } else if (metCount === 4) {
+      score = 3
+      message = "Good password"
+      color = "bg-blue-500"
+    } else {
+      score = 4
+      message = "Strong password"
+      color = "bg-green-500"
+    }
+
+    setPasswordStrength({
+      score,
+      message,
+      color,
+      requirements,
+    })
   }
 
   const handleLocationSelect = (location: LocationData) => {
@@ -60,9 +135,9 @@ export default function RegisterPage() {
       return false
     }
 
-    // Validate password length
-    if (formData.password.length < 8) {
-      alert("Password must be at least 8 characters long")
+    // Validate password strength
+    if (passwordStrength.score < 3) {
+      alert("Please use a stronger password. Password must be at least Good strength.")
       return false
     }
 
@@ -126,9 +201,7 @@ export default function RegisterPage() {
       }
 
       if (result.success) {
-        // Show success message
         alert("Registration successful! You can now login.")
-        // Redirect to login page
         router.push('/login')
       } else {
         throw new Error(result.message || 'Registration failed')
@@ -331,10 +404,83 @@ export default function RegisterPage() {
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
+                      
+                      {/* Password Strength Indicator */}
+                      {formData.password && (
+                        <div className="mt-2 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-300 ${passwordStrength.color}`}
+                                style={{ width: `${(passwordStrength.score / 4) * 100}%` }}
+                              />
+                            </div>
+                            <span className="ml-2 text-xs font-medium">
+                              {passwordStrength.message}
+                            </span>
+                          </div>
+                          
+                          {/* Password Requirements Checklist */}
+                          <div className="grid grid-cols-1 gap-1 mt-2 text-xs">
+                            <div className="flex items-center space-x-2">
+                              {passwordStrength.requirements.length ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3 text-gray-400" />
+                              )}
+                              <span className={passwordStrength.requirements.length ? "text-green-600" : "text-gray-500"}>
+                                At least 8 characters
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {passwordStrength.requirements.uppercase ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3 text-gray-400" />
+                              )}
+                              <span className={passwordStrength.requirements.uppercase ? "text-green-600" : "text-gray-500"}>
+                                One uppercase letter
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {passwordStrength.requirements.lowercase ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3 text-gray-400" />
+                              )}
+                              <span className={passwordStrength.requirements.lowercase ? "text-green-600" : "text-gray-500"}>
+                                One lowercase letter
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {passwordStrength.requirements.number ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3 text-gray-400" />
+                              )}
+                              <span className={passwordStrength.requirements.number ? "text-green-600" : "text-gray-500"}>
+                                One number
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {passwordStrength.requirements.special ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3 text-gray-400" />
+                              )}
+                              <span className={passwordStrength.requirements.special ? "text-green-600" : "text-gray-500"}>
+                                One special character (!@#$%^&*)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       <p className="text-xs text-gray-500 mt-1">
-                        Password must be at least 8 characters long
+                        Use a strong password to keep your account secure
                       </p>
                     </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="confirm-password">
                         Confirm Password <span className="text-red-500">*</span>
@@ -344,7 +490,13 @@ export default function RegisterPage() {
                           id="confirm-password"
                           type={showConfirmPassword ? "text" : "password"}
                           placeholder="Confirm your password"
-                          className="h-11 pr-10"
+                          className={`h-11 pr-10 ${
+                            formData.confirmPassword && formData.password !== formData.confirmPassword
+                              ? "border-red-500 focus-visible:ring-red-500"
+                              : formData.confirmPassword && formData.password === formData.confirmPassword
+                              ? "border-green-500 focus-visible:ring-green-500"
+                              : ""
+                          }`}
                           value={formData.confirmPassword}
                           onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                           required
@@ -361,6 +513,16 @@ export default function RegisterPage() {
                           {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
+                      {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                        <p className="text-xs text-red-500 mt-1">
+                          Passwords do not match
+                        </p>
+                      )}
+                      {formData.confirmPassword && formData.password === formData.confirmPassword && formData.password && (
+                        <p className="text-xs text-green-500 mt-1">
+                          ✓ Passwords match
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
