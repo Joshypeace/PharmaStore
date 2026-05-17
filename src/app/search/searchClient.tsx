@@ -103,12 +103,12 @@ export default function SearchPage() {
     if (saved) {
       try {
         const convos = JSON.parse(saved)
-        setConversations(convos.map((c: { pharmacyId: string; pharmacyName: string; messages: any[]; lastMessageTime: string }) => ({
+        setConversations(convos.map((c: { pharmacyId: string; pharmacyName: string; messages: Message[]; lastMessageTime: string }) => ({
           ...c,
           lastMessageTime: new Date(c.lastMessageTime),
-          messages: c.messages.map((m: { id: string; message: string; isFromPharmacy: boolean; createdAt: string; timestamp: string }) => ({
+          messages: c.messages.map((m: Message) => ({
             ...m,
-            timestamp: new Date(m.timestamp)
+            timestamp: typeof m.timestamp === 'string' ? new Date(m.timestamp) : m.timestamp
           }))
         })))
       } catch (e) {}

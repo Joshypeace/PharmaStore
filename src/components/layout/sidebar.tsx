@@ -16,6 +16,7 @@ import {
   Pill,
   CreditCard,
   Box,
+  MessageCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -27,6 +28,7 @@ const navigation = [
   // { name: "Prescriptions", href: "/prescriptions", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Orders", href: "/orders", icon: Box },
+  { name: "Messages", href: "/messages", icon: MessageCircle },
   // { name: "Users", href: "/users", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ]
