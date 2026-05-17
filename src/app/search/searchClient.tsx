@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { 
   Search, 
@@ -20,7 +20,10 @@ import {
   Package,
   WifiOff,
   Send,
-  MessageSquare
+  MessageSquare,
+  X,
+  Maximize2,
+  Minimize2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +34,14 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
+
+// Google Maps Types
+declare global {
+  interface Window {
+    google: any
+    initMap: () => void
+  }
+}
 
 interface Pharmacy {
   id: string
@@ -85,6 +96,15 @@ export default function SearchPage() {
   const [newMessage, setNewMessage] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
   
+  // Map modal state
+  const [mapModalOpen, setMapModalOpen] = useState(false)
+  const [selectedPharmacyForMap, setSelectedPharmacyForMap] = useState<Pharmacy | null>(null)
+  const [mapLoaded, setMapLoaded] = useState(false)
+  const mapRef = useRef<HTMLDivElement>(null)
+  const [mapInstance, setMapInstance] = useState<any>(null)
+  const [directionsRenderer, setDirectionsRenderer] = useState<any>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  
   // Order form state
   const [selectedPharmacy, setSelectedPharmacy] = useState<Pharmacy | null>(null)
   const [orderForm, setOrderForm] = useState({
@@ -96,6 +116,143 @@ export default function SearchPage() {
   })
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState<{ orderNumber: string; message: string } | null>(null)
+
+  // Load Google Maps script
+  useEffect(() => {
+    if (!window.google && mapModalOpen && !mapLoaded) {
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`
+      script.async = true
+      script.defer = true
+      script.onload = () => {
+        setMapLoaded(true)
+        if (mapRef.current && selectedPharmacyForMap) {
+          initializeMap()
+        }
+      }
+      document.head.appendChild(script)
+    } else if (mapLoaded && mapModalOpen && selectedPharmacyForMap && !mapInstance) {
+      initializeMap()
+    }
+  }, [mapModalOpen, mapLoaded, selectedPharmacyForMap])
+
+  const initializeMap = () => {
+    if (!mapRef.current || !window.google || !selectedPharmacyForMap) return
+
+    // Get user location or default to pharmacy location
+    const center = userLocation 
+      ? { lat: userLocation.lat, lng: userLocation.lng }
+      : { lat: selectedPharmacyForMap.latitude, lng: selectedPharmacyForMap.longitude }
+
+    const map = new window.google.maps.Map(mapRef.current, {
+      center: center,
+      zoom: 13,
+      styles: [
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }]
+        }
+      ]
+    })
+
+    const renderer = new window.google.maps.DirectionsRenderer()
+    renderer.setMap(map)
+
+    setMapInstance(map)
+    setDirectionsRenderer(renderer)
+
+    // Add markers
+    addMarkers(map, renderer)
+  }
+
+  const addMarkers = async (map: any, renderer: any) => {
+    if (!window.google || !selectedPharmacyForMap) return
+
+    // Pharmacy marker
+    const pharmacyLocation = {
+      lat: selectedPharmacyForMap.latitude,
+      lng: selectedPharmacyForMap.longitude
+    }
+
+    new window.google.maps.Marker({
+      position: pharmacyLocation,
+      map: map,
+      title: selectedPharmacyForMap.name,
+      icon: {
+        url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+        scaledSize: new window.google.maps.Size(40, 40)
+      },
+      animation: window.google.maps.Animation.DROP
+    })
+
+    // User marker (if location available)
+    if (userLocation) {
+      new window.google.maps.Marker({
+        position: { lat: userLocation.lat, lng: userLocation.lng },
+        map: map,
+        title: 'Your Location',
+        icon: {
+          url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+          scaledSize: new window.google.maps.Size(40, 40)
+        },
+        animation: window.google.maps.Animation.DROP
+      })
+
+      // Calculate and display directions
+      const directionsService = new window.google.maps.DirectionsService()
+      
+      const request = {
+        origin: { lat: userLocation.lat, lng: userLocation.lng },
+        destination: pharmacyLocation,
+        travelMode: window.google.maps.TravelMode.DRIVING,
+        unitSystem: window.google.maps.UnitSystem.METRIC
+      }
+
+      directionsService.route(request, (result: any, status: string) => {
+        if (status === 'OK') {
+          renderer.setDirections(result)
+          
+          // Fit bounds to show the entire route
+          const bounds = new window.google.maps.LatLngBounds()
+          bounds.extend({ lat: userLocation.lat, lng: userLocation.lng })
+          bounds.extend(pharmacyLocation)
+          map.fitBounds(bounds)
+        }
+      })
+    } else {
+      // Just center on pharmacy
+      map.setCenter(pharmacyLocation)
+      map.setZoom(15)
+    }
+  }
+
+  const openMapModal = (pharmacy: Pharmacy) => {
+    setSelectedPharmacyForMap(pharmacy)
+    setMapModalOpen(true)
+  }
+
+  const toggleFullscreen = () => {
+    const modalContent = document.querySelector('.map-modal-content')
+    if (modalContent) {
+      if (!isFullscreen) {
+        modalContent.requestFullscreen()
+        setIsFullscreen(true)
+      } else {
+        document.exitFullscreen()
+        setIsFullscreen(false)
+      }
+    }
+  }
+
+  // Listen for fullscreen change
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   // Load conversations from localStorage
   useEffect(() => {
@@ -420,354 +577,436 @@ export default function SearchPage() {
     }
   }
 
-  const openDirections = (pharmacy: Pharmacy) => {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${pharmacy.latitude},${pharmacy.longitude}`)
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white sticky top-0 z-10 shadow-lg">
-        <div className="container mx-auto px-4 py-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 mb-4">
-              <Pill className="h-8 w-8" />
-              <h1 className="text-2xl font-bold">Medicine Finder</h1>
-            </div>
-            
-            {/* Search Bar */}
-            <form onSubmit={handleSearch} className="relative">
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    type="text"
-                    placeholder="Search for medicine (e.g., Paracetamol, Amoxicillin, Metformin...)"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-12 text-gray-900 bg-white border-0 focus-visible:ring-2 focus-visible:ring-emerald-500"
-                  />
-                </div>
-                <Button type="submit" disabled={isSearching} className="h-12 px-6 bg-white text-emerald-600 hover:bg-gray-100">
-                  {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
-                </Button>
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
+        {/* Hero Section */}
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white sticky top-0 z-10 shadow-lg">
+          <div className="container mx-auto px-4 py-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center gap-3 mb-4">
+                <Pill className="h-8 w-8" />
+                <h1 className="text-2xl font-bold">Medicine Finder</h1>
               </div>
-            </form>
+              
+              {/* Search Bar */}
+              <form onSubmit={handleSearch} className="relative">
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search for medicine (e.g., Paracetamol, Amoxicillin, Metformin...)"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-12 text-gray-900 bg-white border-0 focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    />
+                  </div>
+                  <Button type="submit" disabled={isSearching} className="h-12 px-6 bg-white text-emerald-600 hover:bg-gray-100">
+                    {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                  </Button>
+                </div>
+              </form>
 
-            {/* Quick filters */}
-            <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-              {trendingSearches.map(term => (
-                <button
-                  key={term}
-                  onClick={() => handleQuickSearch(term)}
-                  className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-sm whitespace-nowrap transition-colors"
-                >
-                  {term}
-                </button>
-              ))}
+              {/* Quick filters */}
+              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+                {trendingSearches.map(term => (
+                  <button
+                    key={term}
+                    onClick={() => handleQuickSearch(term)}
+                    className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-sm whitespace-nowrap transition-colors"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
             </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto">
+            {/* Location Status */}
+            {locationPermissionDenied && (
+              <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <WifiOff className="h-4 w-4" />
+                  <span className="text-sm">Location access denied. Showing results for Lilongwe area.</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => getUserLocation()}>Try Again</Button>
+              </div>
+            )}
+
+            {/* Results Section */}
+            {hasSearched && (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {searchResults.length > 0 
+                      ? `${searchResults.length} pharmacy(s) with "${searchTerm}" in stock`
+                      : !isSearching && `No results for "${searchTerm}"`
+                    }
+                  </h2>
+                  {searchResults.length > 0 && (
+                    <Badge variant="outline" className="text-emerald-600">
+                      Sorted by distance
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid gap-5">
+                  {searchResults.map((pharmacy, index) => (
+                    <Card key={index} className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                          {/* Left - Pharmacy Info */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h3 className="text-lg font-semibold text-gray-900">{pharmacy.name}</h3>
+                                {pharmacy.rating && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-sm text-gray-600">{pharmacy.rating}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <Badge className="bg-emerald-100 text-emerald-700">
+                                <Package className="h-3 w-3 mr-1" /> In Stock
+                              </Badge>
+                            </div>
+                            
+                            <div className="space-y-2 mt-3">
+                              <div className="flex items-start gap-2 text-gray-600">
+                                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                <span className="text-sm">{pharmacy.location}</span>
+                              </div>
+                              
+                              <div className="flex flex-wrap items-center gap-4 text-sm">
+                                {pharmacy.distance !== undefined && (
+                                  <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                                    <Navigation className="h-3.5 w-3.5" />
+                                    <span>{pharmacy.distance.toFixed(1)} km away</span>
+                                  </div>
+                                )}
+                                {pharmacy.duration && (
+                                  <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    <span>{pharmacy.duration}</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center justify-between pt-2 border-t mt-2">
+                                <div className="flex items-baseline gap-1">
+                                  <DollarSign className="h-4 w-4 text-emerald-600" />
+                                  <span className="text-2xl font-bold text-emerald-600">
+                                    MWK {pharmacy.price.toLocaleString()}
+                                  </span>
+                                  <span className="text-sm text-gray-500">per unit</span>
+                                </div>
+                                <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
+                                  {pharmacy.quantity} units available
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right - Actions */}
+                          <div className="flex flex-col gap-2 min-w-[200px]">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button onClick={() => openOrderDialog(pharmacy)} className="bg-emerald-600 hover:bg-emerald-700 w-full">
+                                  Order Now
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-md">
+                                {orderSuccess ? (
+                                  <div className="text-center py-8">
+                                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                                    <h3 className="text-xl font-semibold mb-2">Order Placed!</h3>
+                                    <p className="text-gray-600 mb-2">Order #{orderSuccess.orderNumber}</p>
+                                    <p className="text-sm text-gray-500">{orderSuccess.message}</p>
+                                    <Button onClick={() => setSelectedPharmacy(null)} className="mt-6">
+                                      Close
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <DialogHeader>
+                                      <DialogTitle>Order {searchTerm}</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div className="bg-gray-50 p-4 rounded-lg">
+                                        <p className="font-medium">{selectedPharmacy?.name}</p>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                          Price: MWK {selectedPharmacy?.price.toLocaleString()} per unit
+                                        </p>
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label>Your Name *</Label>
+                                        <Input
+                                          value={orderForm.customerName}
+                                          onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
+                                          placeholder="Full name"
+                                        />
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label>Phone Number *</Label>
+                                        <Input
+                                          value={orderForm.customerPhone}
+                                          onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
+                                          placeholder="Phone number for updates"
+                                        />
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label>Email (Optional)</Label>
+                                        <Input
+                                          type="email"
+                                          value={orderForm.customerEmail}
+                                          onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
+                                          placeholder="email@example.com"
+                                        />
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label>Quantity *</Label>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          max={selectedPharmacy?.quantity}
+                                          value={orderForm.quantity}
+                                          onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
+                                        />
+                                        <p className="text-xs text-gray-500">Max available: {selectedPharmacy?.quantity}</p>
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label>Notes (Optional)</Label>
+                                        <Textarea
+                                          value={orderForm.notes}
+                                          onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
+                                          placeholder="Any special instructions"
+                                          rows={2}
+                                        />
+                                      </div>
+                                      
+                                      <div className="rounded-lg bg-emerald-50 p-3">
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-gray-600">Total:</span>
+                                          <span className="font-bold text-emerald-700">
+                                            MWK {((selectedPharmacy?.price || 0) * orderForm.quantity).toLocaleString()}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      
+                                      <Button onClick={placeOrder} disabled={isPlacingOrder} className="w-full">
+                                        {isPlacingOrder ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                        {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+                                      </Button>
+                                    </div>
+                                  </>
+                                )}
+                              </DialogContent>
+                            </Dialog>
+                            
+                            {/* Directions Button with Map Modal */}
+                            <Button 
+                              onClick={() => openMapModal(pharmacy)} 
+                              variant="outline" 
+                              className="w-full"
+                            >
+                              <Navigation className="mr-2 h-4 w-4" /> View Map & Directions
+                            </Button>
+                            
+                            {/* In-App Message Button */}
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  onClick={() => openConversation(pharmacy)} 
+                                  variant="outline" 
+                                  className="w-full"
+                                >
+                                  <MessageCircle className="mr-2 h-4 w-4" /> Message Pharmacy
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Chat with {activeConversation?.pharmacyName || pharmacy.name}</DialogTitle>
+                                </DialogHeader>
+                                <div className="flex flex-col h-[400px]">
+                                  <ScrollArea className="flex-1 pr-4">
+                                    <div className="space-y-4">
+                                      {activeConversation?.messages.map((msg) => (
+                                        <div
+                                          key={msg.id}
+                                          className={`flex ${msg.isFromUser ? 'justify-end' : 'justify-start'}`}
+                                        >
+                                          <div
+                                            className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                                              msg.isFromUser
+                                                ? 'bg-emerald-500 text-white'
+                                                : 'bg-gray-100 text-gray-900'
+                                            }`}
+                                          >
+                                            <p className="text-sm">{msg.text}</p>
+                                            <p className={`text-xs mt-1 ${
+                                              msg.isFromUser ? 'text-emerald-100' : 'text-gray-500'
+                                            }`}>
+                                              {msg.timestamp.toLocaleTimeString()}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      {(!activeConversation?.messages || activeConversation.messages.length === 0) && (
+                                        <div className="text-center text-gray-500 py-8">
+                                          <MessageSquare className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                                          <p>No messages yet</p>
+                                          <p className="text-sm">Send a message to the pharmacy</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </ScrollArea>
+                                  <div className="flex gap-2 mt-4">
+                                    <Input
+                                      placeholder="Type your message..."
+                                      value={newMessage}
+                                      onChange={(e) => setNewMessage(e.target.value)}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter' && !sendingMessage && newMessage.trim()) {
+                                          sendMessageToPharmacy(pharmacy.id, newMessage)
+                                        }
+                                      }}
+                                    />
+                                    <Button
+                                      onClick={() => sendMessageToPharmacy(pharmacy.id, newMessage)}
+                                      disabled={sendingMessage || !newMessage.trim()}
+                                      size="icon"
+                                    >
+                                      {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {!isSearching && searchResults.length === 0 && hasSearched && (
+                  <div className="text-center py-16">
+                    <AlertCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-xl font-medium text-gray-900 mb-2">No pharmacies found</h3>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                      {`We couldn't find any pharmacies with "${searchTerm}" in stock. Try searching for a different medicine or check back later.`}
+                    </p>
+                    <div className="mt-6">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">Popular alternatives:</h4>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {trendingSearches.filter(t => t !== searchTerm).slice(0, 3).map(term => (
+                          <button
+                            key={term}
+                            onClick={() => handleQuickSearch(term)}
+                            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                          >
+                            {term}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Location Status */}
-          {locationPermissionDenied && (
-            <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2 text-yellow-800">
-                <WifiOff className="h-4 w-4" />
-                <span className="text-sm">Location access denied. Showing results for Lilongwe area.</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => getUserLocation()}>Try Again</Button>
+      {/* Map Modal */}
+          <Dialog open={mapModalOpen} onOpenChange={setMapModalOpen}>
+            <DialogContent className="map-modal-content max-w-4xl w-[90vw] h-[80vh] p-0 overflow-hidden">
+                <DialogTitle className="sr-only">
+          Map Directions to {selectedPharmacyForMap?.name || 'Pharmacy'}
+        </DialogTitle>
+          <div className="relative h-full">
+            <div className="absolute top-4 right-4 z-10 flex gap-2">
+              <Button
+                size="icon"
+                variant="secondary"
+                onClick={toggleFullscreen}
+                className="bg-white shadow-lg hover:bg-gray-100"
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+              <Button
+                size="icon"
+                variant="secondary"
+                onClick={() => setMapModalOpen(false)}
+                className="bg-white shadow-lg hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-
-          {/* Results Section */}
-          {hasSearched && (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">
-                  {searchResults.length > 0 
-                    ? `${searchResults.length} pharmacy(s) with "${searchTerm}" in stock`
-                    : !isSearching && `No results for "${searchTerm}"`
-                  }
-                </h2>
-                {searchResults.length > 0 && (
-                  <Badge variant="outline" className="text-emerald-600">
-                    Sorted by distance
-                  </Badge>
-                )}
-              </div>
-
-              <div className="grid gap-5">
-                {searchResults.map((pharmacy, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                        {/* Left - Pharmacy Info */}
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900">{pharmacy.name}</h3>
-                              {pharmacy.rating && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-sm text-gray-600">{pharmacy.rating}</span>
-                                </div>
-                              )}
-                            </div>
-                            <Badge className="bg-emerald-100 text-emerald-700">
-                              <Package className="h-3 w-3 mr-1" /> In Stock
-                            </Badge>
-                          </div>
-                          
-                          <div className="space-y-2 mt-3">
-                            <div className="flex items-start gap-2 text-gray-600">
-                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm">{pharmacy.location}</span>
-                            </div>
-                            
-                            <div className="flex flex-wrap items-center gap-4 text-sm">
-                              {pharmacy.distance !== undefined && (
-                                <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                                  <Navigation className="h-3.5 w-3.5" />
-                                  <span>{pharmacy.distance.toFixed(1)} km away</span>
-                                </div>
-                              )}
-                              {pharmacy.duration && (
-                                <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                                  <Clock className="h-3.5 w-3.5" />
-                                  <span>{pharmacy.duration}</span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center justify-between pt-2 border-t mt-2">
-                              <div className="flex items-baseline gap-1">
-                                <DollarSign className="h-4 w-4 text-emerald-600" />
-                                <span className="text-2xl font-bold text-emerald-600">
-                                  MWK {pharmacy.price.toLocaleString()}
-                                </span>
-                                <span className="text-sm text-gray-500">per unit</span>
-                              </div>
-                              <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
-                                {pharmacy.quantity} units available
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right - Actions */}
-                        <div className="flex flex-col gap-2 min-w-[200px]">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button onClick={() => openOrderDialog(pharmacy)} className="bg-emerald-600 hover:bg-emerald-700 w-full">
-                                Order Now
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                              {orderSuccess ? (
-                                <div className="text-center py-8">
-                                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                                  <h3 className="text-xl font-semibold mb-2">Order Placed!</h3>
-                                  <p className="text-gray-600 mb-2">Order #{orderSuccess.orderNumber}</p>
-                                  <p className="text-sm text-gray-500">{orderSuccess.message}</p>
-                                  <Button onClick={() => setSelectedPharmacy(null)} className="mt-6">
-                                    Close
-                                  </Button>
-                                </div>
-                              ) : (
-                                <>
-                                  <DialogHeader>
-                                    <DialogTitle>Order {searchTerm}</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                      <p className="font-medium">{selectedPharmacy?.name}</p>
-                                      <p className="text-sm text-gray-600 mt-1">
-                                        Price: MWK {selectedPharmacy?.price.toLocaleString()} per unit
-                                      </p>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Your Name *</Label>
-                                      <Input
-                                        value={orderForm.customerName}
-                                        onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
-                                        placeholder="Full name"
-                                      />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Phone Number *</Label>
-                                      <Input
-                                        value={orderForm.customerPhone}
-                                        onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
-                                        placeholder="Phone number for updates"
-                                      />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Email (Optional)</Label>
-                                      <Input
-                                        type="email"
-                                        value={orderForm.customerEmail}
-                                        onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
-                                        placeholder="email@example.com"
-                                      />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Quantity *</Label>
-                                      <Input
-                                        type="number"
-                                        min="1"
-                                        max={selectedPharmacy?.quantity}
-                                        value={orderForm.quantity}
-                                        onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
-                                      />
-                                      <p className="text-xs text-gray-500">Max available: {selectedPharmacy?.quantity}</p>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Notes (Optional)</Label>
-                                      <Textarea
-                                        value={orderForm.notes}
-                                        onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
-                                        placeholder="Any special instructions"
-                                        rows={2}
-                                      />
-                                    </div>
-                                    
-                                    <div className="rounded-lg bg-emerald-50 p-3">
-                                      <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Total:</span>
-                                        <span className="font-bold text-emerald-700">
-                                          MWK {((selectedPharmacy?.price || 0) * orderForm.quantity).toLocaleString()}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    
-                                    <Button onClick={placeOrder} disabled={isPlacingOrder} className="w-full">
-                                      {isPlacingOrder ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                      {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
-                                    </Button>
-                                  </div>
-                                </>
-                              )}
-                            </DialogContent>
-                          </Dialog>
-                          
-                          <Button onClick={() => openDirections(pharmacy)} variant="outline" className="w-full">
-                            <Navigation className="mr-2 h-4 w-4" /> Directions
-                          </Button>
-                          
-                          {/* In-App Message Button */}
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                onClick={() => openConversation(pharmacy)} 
-                                variant="outline" 
-                                className="w-full"
-                              >
-                                <MessageCircle className="mr-2 h-4 w-4" /> Message Pharmacy
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                              <DialogHeader>
-                                <DialogTitle>Chat with {activeConversation?.pharmacyName || pharmacy.name}</DialogTitle>
-                              </DialogHeader>
-                              <div className="flex flex-col h-[400px]">
-                                <ScrollArea className="flex-1 pr-4">
-                                  <div className="space-y-4">
-                                    {activeConversation?.messages.map((msg) => (
-                                      <div
-                                        key={msg.id}
-                                        className={`flex ${msg.isFromUser ? 'justify-end' : 'justify-start'}`}
-                                      >
-                                        <div
-                                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                                            msg.isFromUser
-                                              ? 'bg-emerald-500 text-white'
-                                              : 'bg-gray-100 text-gray-900'
-                                          }`}
-                                        >
-                                          <p className="text-sm">{msg.text}</p>
-                                          <p className={`text-xs mt-1 ${
-                                            msg.isFromUser ? 'text-emerald-100' : 'text-gray-500'
-                                          }`}>
-                                            {msg.timestamp.toLocaleTimeString()}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    ))}
-                                    {(!activeConversation?.messages || activeConversation.messages.length === 0) && (
-                                      <div className="text-center text-gray-500 py-8">
-                                        <MessageSquare className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                                        <p>No messages yet</p>
-                                        <p className="text-sm">Send a message to the pharmacy</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </ScrollArea>
-                                <div className="flex gap-2 mt-4">
-                                  <Input
-                                    placeholder="Type your message..."
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    onKeyPress={(e) => {
-                                      if (e.key === 'Enter' && !sendingMessage && newMessage.trim()) {
-                                        sendMessageToPharmacy(pharmacy.id, newMessage)
-                                      }
-                                    }}
-                                  />
-                                  <Button
-                                    onClick={() => sendMessageToPharmacy(pharmacy.id, newMessage)}
-                                    disabled={sendingMessage || !newMessage.trim()}
-                                    size="icon"
-                                  >
-                                    {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {!isSearching && searchResults.length === 0 && hasSearched && (
-                <div className="text-center py-16">
-                  <AlertCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-xl font-medium text-gray-900 mb-2">No pharmacies found</h3>
-                  <p className="text-gray-500 max-w-md mx-auto">
-                    {`We couldn't find any pharmacies with "${searchTerm}" in stock. Try searching for a different medicine or check back later.`}
+            
+            {/* Map Header Info */}
+            {selectedPharmacyForMap && (
+              <div className="absolute top-4 left-4 z-10 bg-white rounded-lg shadow-lg p-3 max-w-sm">
+                <h3 className="font-semibold text-gray-900">{selectedPharmacyForMap.name}</h3>
+                <p className="text-sm text-gray-600 mt-1">{selectedPharmacyForMap.location}</p>
+                {selectedPharmacyForMap.distance !== undefined && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    📍 {selectedPharmacyForMap.distance.toFixed(1)} km from your location
+                    {selectedPharmacyForMap.duration && ` • ${selectedPharmacyForMap.duration}`}
                   </p>
-                  <div className="mt-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Popular alternatives:</h4>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {trendingSearches.filter(t => t !== searchTerm).slice(0, 3).map(term => (
-                        <button
-                          key={term}
-                          onClick={() => handleQuickSearch(term)}
-                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
-                        >
-                          {term}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                )}
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${selectedPharmacyForMap.latitude},${selectedPharmacyForMap.longitude}`)
+                    }}
+                  >
+                    Open in Google Maps
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      window.open(`https://waze.com/ul?ll=${selectedPharmacyForMap.latitude},${selectedPharmacyForMap.longitude}&navigate=yes`)
+                    }}
+                  >
+                    Open in Waze
+                  </Button>
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+              </div>
+            )}
+            
+            {/* Google Map */}
+            <div 
+              ref={mapRef} 
+              className="w-full h-full"
+              style={{ minHeight: '400px' }}
+            />
+            
+            {/* Loading Overlay */}
+            {!mapLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-2" />
+                  <p className="text-gray-600">Loading map...</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
