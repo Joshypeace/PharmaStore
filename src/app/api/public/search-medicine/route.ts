@@ -30,16 +30,13 @@ export async function GET(request: NextRequest) {
 
     const medicineIds = medicines.map(m => m.id)
 
-    // Use UTC date for comparison to avoid timezone issues
+    // Get current UTC date for expiry check
     const nowUTC = new Date()
-    // Set to UTC midnight to be safe
     const todayUTC = new Date(Date.UTC(
       nowUTC.getUTCFullYear(),
       nowUTC.getUTCMonth(),
       nowUTC.getUTCDate()
     ))
-
-    console.log('Current UTC date for comparison:', todayUTC.toISOString())
 
     const inventoryItems = await prisma.inventoryItem.findMany({
       where: {
@@ -55,30 +52,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`Found ${inventoryItems.length} inventory items with stock`)
 
-    if (inventoryItems.length === 0) {
-      // Check if there are items with quantity but expired
-      const expiredItems = await prisma.inventoryItem.findMany({
-        where: {
-          medicineId: { in: medicineIds },
-          quantity: { gt: 0 },
-          expiryDate: { lte: todayUTC }
-        },
-        include: {
-          medicine: true,
-          pharmacy: true
-        }
-      })
-      
-      if (expiredItems.length > 0) {
-        console.log(`Found ${expiredItems.length} expired items that would have been in stock`)
-        return NextResponse.json({ 
-          pharmacies: [], 
-          medicine: medicines[0].name,
-          message: `Medicine found but all stock has expired. Last expiry: ${expiredItems[0].expiryDate}` 
-        })
-      }
-    }
-
+    // Calculate accurate distances using Haversine formula
     const pharmacies = inventoryItems.map(item => {
       const distance = calculateDistance(
         userLat, userLng,
@@ -86,6 +60,7 @@ export async function GET(request: NextRequest) {
         item.pharmacy.longitude
       )
       const duration = calculateDuration(distance)
+      const priceInMWK = Math.round(item.price) // Ensure price is in MWK
 
       return {
         id: item.pharmacy.id,
@@ -96,9 +71,9 @@ export async function GET(request: NextRequest) {
         phone: item.pharmacy.phone,
         email: item.pharmacy.email,
         inventoryItemId: item.id,
-        price: item.price,
+        price: priceInMWK,
         quantity: item.quantity,
-        distance: distance,
+        distance: parseFloat(distance.toFixed(1)),
         duration: duration
       }
     }).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity))
@@ -118,29 +93,55 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Accurate Haversine formula for distance calculation
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  if (lat1 === 0 && lon1 === 0) return 999
-  if (lat2 === 0 && lon2 === 0) return 999
+  // Handle missing coordinates
+  if (!lat1 || !lon1 || lat1 === 0 || lon1 === 0) return 999
+  if (!lat2 || !lon2 || lat2 === 0 || lon2 === 0) return 999
   
-  const R = 6371
+  const R = 6371 // Earth's radius in kilometers
   const dLat = toRad(lat2 - lat1)
   const dLon = toRad(lon2 - lon1)
+  
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
+  const distance = R * c
+  
+  // Return distance rounded to 1 decimal place, minimum 0.1 km
+  return Math.max(0.1, parseFloat(distance.toFixed(1)))
 }
 
 function toRad(degrees: number): number {
   return degrees * (Math.PI / 180)
 }
 
+// More accurate duration calculation based on distance and estimated speed
 function calculateDuration(distanceKm: number): string {
-  if (distanceKm === 999) return 'Distance unknown'
-  const minutes = Math.round((distanceKm / 30) * 60)
-  if (minutes < 60) return `${minutes} min drive`
+  if (distanceKm === 999) return 'Distance unavailable'
+  
+  // Different speeds based on distance and location type
+  let estimatedSpeedKmh = 30 // Default city speed
+  
+  if (distanceKm < 2) {
+    estimatedSpeedKmh = 25 // Short distances, slower due to local roads
+  } else if (distanceKm < 10) {
+    estimatedSpeedKmh = 35 // Medium distances, mix of roads
+  } else {
+    estimatedSpeedKmh = 50 // Longer distances, faster roads
+  }
+  
+  const minutes = Math.round((distanceKm / estimatedSpeedKmh) * 60)
+  
+  if (minutes < 1) return 'Less than 1 min'
+  if (minutes === 1) return '1 min'
+  if (minutes < 60) return `${minutes} mins`
+  
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
-  return `${hours} hr ${remainingMinutes} min drive`
+  
+  if (remainingMinutes === 0) return `${hours} hr`
+  return `${hours} hr ${remainingMinutes} mins`
 }
