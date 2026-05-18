@@ -110,9 +110,6 @@ importers:
       '@types/bcryptjs':
         specifier: ^3.0.0
         version: 3.0.0
-      '@types/google.maps':
-        specifier: ^3.64.0
-        version: 3.64.1
       autoprefixer:
         specifier: ^10.4.20
         version: 10.5.0(postcss@8.5.14)
@@ -122,6 +119,9 @@ importers:
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.3
+      browser-monads:
+        specifier: ^1.0.0
+        version: 1.0.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -216,6 +216,9 @@ importers:
       '@types/bcrypt':
         specifier: ^6.0.0
         version: 6.0.0
+      '@types/google.maps':
+        specifier: ^3.64.0
+        version: 3.64.1
       '@types/node':
         specifier: ^22
         version: 22.19.19
@@ -1728,6 +1731,9 @@ packages:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
 
+  browser-monads@1.0.0:
+    resolution: {integrity: sha512-NgmpFaI9NtRKyzHYA+xVzPA5Bu+JgCBzgC3WJCXstlajCBB3fJTieBwImdG8JepK8GctHSnia866ceFLg1LLTQ==}
+
   browserslist@4.28.2:
     resolution: {integrity: sha512-48xSriZYYg+8qXna9kwqjIVzuQxi+KYWp2+5nCYnYKPTr0LvD89Jqk2Or5ogxz0NUMfIjhh2lIUX/LyX9B4oIg==}
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
@@ -2749,6 +2755,9 @@ packages:
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
+
+  nothing-mock@1.0.4:
+    resolution: {integrity: sha512-wl5hpQruSQHt5M15oY/akWd7hFPyec0uTCUHYQa3WhBeTxonsFnMKmixaCDvb4U7MN9UjS2UvXw3s4KxjrNjKg==}
 
   nypm@0.6.6:
     resolution: {integrity: sha512-vRyr0r4cbBapw07Xw8xrj9Teq3o7MUD35rSaTcanDbW+aK2XHDgJFiU6ZTj2GBw7Q12ysdsyFss+Vdz4hQ0Y6Q==}
@@ -4989,6 +4998,10 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
+  browser-monads@1.0.0:
+    dependencies:
+      nothing-mock: 1.0.4
+
   browserslist@4.28.2:
     dependencies:
       baseline-browser-mapping: 2.10.30
@@ -6146,6 +6159,8 @@ snapshots:
   node-releases@2.0.44: {}
 
   normalize-path@3.0.0: {}
+
+  nothing-mock@1.0.4: {}
 
   nypm@0.6.6:
     dependencies:
