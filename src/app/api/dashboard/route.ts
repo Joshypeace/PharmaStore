@@ -1,16 +1,10 @@
-// app/api/dashboard/route.ts
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { WeeklySale, StockDistributionItem, TopDrugGroup, InventoryItem } from "@/types/index";
 
-
-
-
 export async function GET() {
-
-
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.email) {
@@ -18,6 +12,26 @@ export async function GET() {
   }
 
   try {
+    // FIRST: Get the user's pharmacy ID - CRITICAL for isolation
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { 
+        id: true,
+        pharmacyId: true,
+        pharmacy: {
+          select: { id: true, name: true }
+        }
+      }
+    })
+
+    if (!user?.pharmacyId) {
+      return NextResponse.json({ 
+        error: 'No pharmacy associated with this user' 
+      }, { status: 400 })
+    }
+
+    console.log(`Dashboard request for pharmacy: ${user.pharmacy?.name} (${user.pharmacyId})`)
+
     // Get date ranges
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -28,15 +42,15 @@ export async function GET() {
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
 
-    // Get sales data
+    // Get sales data - FILTER BY PHARMACY ID through inventory items
     const todaySales = await prisma.sale.aggregate({
       where: {
         createdAt: {
           gte: today,
           lt: tomorrow
         },
-        soldBy: {
-          email: session.user.email
+        item: {
+          pharmacyId: user.pharmacyId  // ← CRITICAL: Filter by pharmacy
         }
       },
       _sum: {
@@ -50,8 +64,8 @@ export async function GET() {
           gte: yesterday,
           lt: today
         },
-        soldBy: {
-          email: session.user.email
+        item: {
+          pharmacyId: user.pharmacyId  // ← CRITICAL: Filter by pharmacy
         }
       },
       _sum: {
@@ -59,9 +73,10 @@ export async function GET() {
       }
     })
 
-    // Get inventory data
+    // Get inventory data - FILTER BY PHARMACY ID
     const lowStockItems = await prisma.inventoryItem.count({
       where: {
+        pharmacyId: user.pharmacyId,  // ← CRITICAL: Filter by pharmacy
         quantity: {
           lt: 10
         }
@@ -73,6 +88,7 @@ export async function GET() {
 
     const expiringSoonItems = await prisma.inventoryItem.count({
       where: {
+        pharmacyId: user.pharmacyId,  // ← CRITICAL: Filter by pharmacy
         expiryDate: {
           lte: thirtyDaysFromNow,
           gte: new Date()
@@ -80,22 +96,19 @@ export async function GET() {
       }
     })
 
-    // Get weekly sales (last 7 days)
-    const weeklySalesData = await prisma.sale.groupBy({
-      by: ['createdAt'],
+    // Get weekly sales (last 7 days) - FILTER BY PHARMACY ID
+    const weeklySalesData = await prisma.sale.findMany({
       where: {
         createdAt: {
           gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
         },
-        soldBy: {
-          email: session.user.email
+        item: {
+          pharmacyId: user.pharmacyId  // ← CRITICAL: Filter by pharmacy
         }
       },
-      _sum: {
+      select: {
+        createdAt: true,
         totalPrice: true
-      },
-      orderBy: {
-        createdAt: 'asc'
       }
     })
 
@@ -106,36 +119,37 @@ export async function GET() {
       sales: 0
     }))
 
-    
-
-    weeklySalesData.forEach((sale:WeeklySale ) => {
-      const dayIndex = sale.createdAt.getDay()
-      weeklySales[dayIndex].sales += sale._sum.totalPrice || 0
+    weeklySalesData.forEach((sale) => {
+      const dayIndex = new Date(sale.createdAt).getDay()
+      weeklySales[dayIndex].sales += sale.totalPrice || 0
     })
 
-    // Get stock distribution
+    // Get stock distribution - FILTER BY PHARMACY ID
     const stockDistributionData = await prisma.inventoryItem.groupBy({
       by: ['category'],
+      where: {
+        pharmacyId: user.pharmacyId  // ← CRITICAL: Filter by pharmacy
+      },
       _sum: {
         quantity: true
       }
     })
 
-    const stockDistribution = stockDistributionData.map((item: StockDistributionItem) => ({
+    const stockDistribution = stockDistributionData.map((item) => ({
       name: item.category,
       value: item._sum.quantity || 0,
       color: getCategoryColor(item.category)
     }))
 
-    // Get top selling drugs
+    // Get top selling drugs - FILTER BY PHARMACY ID
     const topDrugs = await prisma.sale.groupBy({
       by: ['itemId'],
       where: {
         createdAt: {
           gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
         },
-        soldBy: {
-          email: session.user.email
+        item: {
+          pharmacyId: user.pharmacyId  // ← CRITICAL: Filter by pharmacy
         }
       },
       _sum: {
@@ -149,23 +163,38 @@ export async function GET() {
       take: 4
     })
 
-    // Get item details for top drugs
+    // Get item details for top drugs - SAFE lookups with pharmacy check
     const topDrugsWithDetails = await Promise.all(
-      topDrugs.map(async (sale: TopDrugGroup) => {
-        const item = await prisma.inventoryItem.findUnique({
-          where: { id: sale.itemId }
+      topDrugs.map(async (sale) => {
+        const item = await prisma.inventoryItem.findFirst({
+          where: { 
+            id: sale.itemId,
+            pharmacyId: user.pharmacyId!  // ← CRITICAL: Verify ownership
+          },
+          select: {
+            medicineId: true
+          }
         })
+
+        const medicine = item
+          ? await prisma.medicine.findUnique({
+              where: { id: item.medicineId },
+              select: { name: true }
+            })
+          : null
+
         return {
-          name: item?.medicineId || 'Unknown',
-          quantity: `${sale._sum.quantity} ${item?.medicineId?.includes('tablet') ? 'tablets' : 'units'}`,
+          name: medicine?.name || 'Unknown Medicine',
+          quantity: `${sale._sum.quantity} units`,
           trend: '+0%'
         }
       })
     )
 
-    // Get stock alerts - explicitly type the result
+    // Get stock alerts - FILTER BY PHARMACY ID
     const stockAlertsRaw = await prisma.inventoryItem.findMany({
       where: {
+        pharmacyId: user.pharmacyId,  // ← CRITICAL: Filter by pharmacy
         OR: [
           { quantity: { lt: 5 } },
           { 
@@ -176,23 +205,29 @@ export async function GET() {
           }
         ]
       },
+      select: {
+        quantity: true,
+        expiryDate: true,
+        medicineId: true
+      },
       take: 4
     })
 
-    // Map database fields to InventoryItem type
-    const stockAlerts: InventoryItem[] = stockAlertsRaw.map(item => ({
-      id: item.id,
-      medicine: item.medicineId,
-      batch: item.batch,
-      price: item.price,
-      quantity: item.quantity,
-      expiryDate: item.expiryDate,
-      category: item.category
-    }))
+    const medicineIds = Array.from(new Set(stockAlertsRaw.map((item) => item.medicineId)))
+    const medicines = await prisma.medicine.findMany({
+      where: {
+        id: { in: medicineIds }
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    })
+    const medicineMap = Object.fromEntries(medicines.map((med) => [med.id, med.name]))
 
-    // Explicitly type the formattedAlerts mapping
-    const formattedAlerts = stockAlerts.map((item: InventoryItem) => ({
-      name: item.medicine,
+    // Format stock alerts
+    const formattedAlerts = stockAlertsRaw.map((item) => ({
+      name: medicineMap[item.medicineId],
       status: item.quantity < 5 ? 'Low Stock' : 'Expires Soon',
       level: item.quantity < 5 
         ? `${item.quantity} remaining` 
@@ -200,8 +235,12 @@ export async function GET() {
       type: item.quantity < 3 ? 'danger' : 'warning'
     }))
 
-    // Get active users
-    const activeUsers = await prisma.user.count()
+    // Get active users for this pharmacy only
+    const activeUsers = await prisma.user.count({
+      where: {
+        pharmacyId: user.pharmacyId  // ← CRITICAL: Filter by pharmacy
+      }
+    })
 
     return NextResponse.json({
       todaySales: todaySales._sum.totalPrice || 0,
@@ -212,7 +251,11 @@ export async function GET() {
       weeklySales,
       stockDistribution,
       topDrugs: topDrugsWithDetails,
-      stockAlerts: formattedAlerts
+      stockAlerts: formattedAlerts,
+      pharmacy: {
+        id: user.pharmacy?.id,
+        name: user.pharmacy?.name
+      }
     })
 
   } catch (error) {
