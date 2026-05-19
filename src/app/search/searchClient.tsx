@@ -622,7 +622,7 @@ export default function SearchPage() {
                               <span className="text-sm">{pharmacy.location}</span>
                             </div>
                             
-                            <div className="flex flex-wrap items-center gap-4 text-sm">
+                            {/* <div className="flex flex-wrap items-center gap-4 text-sm">
                               {pharmacy.distance !== undefined && (
                                 <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
                                   <Navigation className="h-3.5 w-3.5" />
@@ -635,7 +635,7 @@ export default function SearchPage() {
                                   <span>{pharmacy.duration}</span>
                                 </div>
                               )}
-                            </div>
+                            </div> */}
                             
                             <div className="flex items-center justify-between pt-2 border-t mt-2">
                               <div className="flex items-baseline gap-1">
