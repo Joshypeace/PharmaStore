@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Search, Plus, Minus, ShoppingCart, CreditCard, Smartphone, Receipt } from 'lucide-react'
+import { Search, Plus, Minus, ShoppingCart, CreditCard, Smartphone, Receipt, Package, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,16 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
-import { Prisma } from '@/lib/prisma'
+import { toast } from '@/components/ui/use-toast'
 
 interface Medicine {
   id: string
   name: string
   price: number
   quantity: number
-  expiryDate?: Date | null
+  expiryDate?: string | null
   batch?: string | null
   category: string
+  status?: string
 }
 
 interface CartItem {
@@ -37,44 +38,53 @@ export default function SalesPage() {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
   const [availableMedicines, setAvailableMedicines] = useState<Medicine[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Fetch medicines from the backend
   useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        const response = await fetch('/api/inventory')
-        if (response.ok) {
-          const data = await response.json()
-          // Ensure all medicines have required fields with fallbacks
-          const medicinesWithDefaults = data.map((medicine: Prisma.InventoryItemCreateInput) => ({
-            id: medicine.id || '',
-            name: medicine.medicine || 'Unknown Medicine',
-            price: medicine.price ?? 0, // Fallback to 0 if price is undefined
-            quantity: medicine.quantity || 0,
-            expiryDate: medicine.expiryDate || null,
-            batch: medicine.batch || null,
-            category: medicine.category || 'Uncategorized'
-          }))
-          setAvailableMedicines(medicinesWithDefaults)
-        } else {
-          console.error('Failed to fetch medicines')
-          setAvailableMedicines([])
-        }
-      } catch (error) {
-        console.error('Error fetching medicines:', error)
-        setAvailableMedicines([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchMedicines()
   }, [])
 
+  const fetchMedicines = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/inventory')
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Fetched inventory:', data) // Debug log
+        
+        // Map the response correctly - handle both field name variations
+        const medicinesWithDefaults = data.map((item: any) => ({
+          id: item.id,
+          name: item.name || item.medicine || item.medicineName || 'Unknown Medicine',
+          price: item.price || 0,
+          quantity: item.quantity || 0,
+          expiryDate: item.expiry || item.expiryDate || null,
+          batch: item.batch || null,
+          category: item.category || 'Uncategorized',
+          status: item.status || 'In Stock'
+        }))
+        
+        setAvailableMedicines(medicinesWithDefaults)
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to fetch medicines:', errorData)
+        toast({ title: 'Error', description: 'Failed to load inventory', variant: 'destructive' })
+        setAvailableMedicines([])
+      }
+    } catch (error) {
+      console.error('Error fetching medicines:', error)
+      toast({ title: 'Error', description: 'Failed to connect to server', variant: 'destructive' })
+      setAvailableMedicines([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const addToCart = (medicine: Medicine) => {
     // Check if there's enough stock
-    if ((medicine.quantity || 0) <= 0) {
-      alert('This medicine is out of stock')
+    if (medicine.quantity <= 0) {
+      toast({ title: 'Out of Stock', description: `${medicine.name} is out of stock`, variant: 'destructive' })
       return
     }
 
@@ -82,25 +92,27 @@ export default function SalesPage() {
     
     if (existingItem) {
       // Check if we're not exceeding available stock
-      if (existingItem.quantity + 1 > (medicine.quantity || 0)) {
-        alert('Not enough stock available')
+      if (existingItem.quantity + 1 > medicine.quantity) {
+        toast({ title: 'Stock Limit', description: `Only ${medicine.quantity} units available`, variant: 'destructive' })
         return
       }
       
       setCart(cart.map(item =>
         item.id === medicine.id
-          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * (item.price || 0) }
+          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.price }
           : item
       ))
     } else {
       setCart([...cart, {
         id: medicine.id,
         name: medicine.name,
-        price: medicine.price || 0,
+        price: medicine.price,
         quantity: 1,
-        total: medicine.price || 0
+        total: medicine.price
       }])
     }
+    
+    toast({ title: 'Added to Cart', description: `${medicine.name} added to cart` })
   }
 
   const updateQuantity = (id: string, newQuantity: number) => {
@@ -109,52 +121,33 @@ export default function SalesPage() {
     } else {
       // Check if we're not exceeding available stock
       const medicine = availableMedicines.find(m => m.id === id)
-      const cartItem = cart.find(item => item.id === id)
       
-      if (medicine && newQuantity > (medicine.quantity || 0)) {
-        alert('Not enough stock available')
+      if (medicine && newQuantity > medicine.quantity) {
+        toast({ title: 'Stock Limit', description: `Only ${medicine.quantity} units available`, variant: 'destructive' })
         return
       }
       
       setCart(cart.map(item =>
         item.id === id
-          ? { ...item, quantity: newQuantity, total: newQuantity * (item.price || 0) }
+          ? { ...item, quantity: newQuantity, total: newQuantity * item.price }
           : item
       ))
     }
   }
 
   const getTotalAmount = () => {
-    return cart.reduce((sum, item) => sum + (item.total || 0), 0)
+    return cart.reduce((sum, item) => sum + item.total, 0)
   }
-
-  // Safe function to get item total (prevents undefined errors)
-  const getItemTotal = (item: CartItem) => {
-    return item.total || (item.price || 0) * item.quantity
-  }
-
-  // Safe function to get medicine price with fallback
-  const getMedicinePrice = (medicine: Medicine) => {
-    return medicine.price || 0
-  }
-
-  // Safe function to get medicine quantity with fallback
-  const getMedicineQuantity = (medicine: Medicine) => {
-    return medicine.quantity || 0
-  }
-
-  const filteredMedicines = availableMedicines.filter(medicine =>
-    medicine.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
 
   const processTransaction = async () => {
     if (cart.length === 0) {
-      alert('Cart is empty. Please add items to process transaction.')
+      toast({ title: 'Cart Empty', description: 'Please add items to process transaction', variant: 'destructive' })
       return
     }
 
+    setIsProcessing(true)
+    
     try {
-      // Process the sale
       const response = await fetch('/api/sales', {
         method: 'POST',
         headers: {
@@ -164,43 +157,47 @@ export default function SalesPage() {
           items: cart.map(item => ({
             id: item.id,
             name: item.name,
-            price: item.price || 0,
+            price: item.price,
             quantity: item.quantity,
-            total: item.total || (item.price || 0) * item.quantity
+            total: item.total
           })),
           paymentMethod,
           total: getTotalAmount(),
         }),
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        // Update the local inventory state
-        const updatedMedicines = availableMedicines.map(medicine => {
-          const cartItem = cart.find(item => item.id === medicine.id)
-          if (cartItem) {
-            return {
-              ...medicine,
-              quantity: (medicine.quantity || 0) - cartItem.quantity
-            }
-          }
-          return medicine
-        })
-        
-        setAvailableMedicines(updatedMedicines)
+        // Refresh inventory to get updated stock levels
+        await fetchMedicines()
         setIsReceiptModalOpen(true)
+        toast({ title: 'Success', description: 'Sale completed successfully!' })
       } else {
-        const errorData = await response.json()
-        alert(`Failed to process transaction: ${errorData.error || 'Unknown error'}`)
+        toast({ title: 'Error', description: data.error || 'Failed to process transaction', variant: 'destructive' })
       }
     } catch (error) {
       console.error('Error processing transaction:', error)
-      alert('Error processing transaction. Please try again.')
+      toast({ title: 'Error', description: 'Network error. Please try again.', variant: 'destructive' })
+    } finally {
+      setIsProcessing(false)
     }
   }
 
   const clearCart = () => {
     setCart([])
+    toast({ title: 'Cart Cleared', description: 'All items removed from cart' })
   }
+
+  const handleReceiptClose = () => {
+    setIsReceiptModalOpen(false)
+    setCart([])
+  }
+
+  // Filter medicines based on search term
+  const filteredMedicines = availableMedicines.filter(medicine =>
+    medicine.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   if (isLoading) {
     return (
@@ -210,7 +207,10 @@ export default function SalesPage() {
           <Header />
           <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading Sales...</p>
+              </div>
             </div>
           </main>
         </div>
@@ -243,7 +243,7 @@ export default function SalesPage() {
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
-                        placeholder="Search by medicine name or scan barcode..."
+                        placeholder="Search by medicine name..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10"
@@ -251,42 +251,50 @@ export default function SalesPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {filteredMedicines.map((medicine) => (
-                      <div
-                        key={medicine.id}
-                        className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => addToCart(medicine)}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-medium text-gray-900">{medicine.name}</h3>
-                          <Badge variant={getMedicineQuantity(medicine) < 10 ? "destructive" : "secondary"}>
-                            {getMedicineQuantity(medicine)} left
-                          </Badge>
-                        </div>
-                        <p className="text-lg font-bold text-green-600">
-                          MWK {getMedicinePrice(medicine).toLocaleString()}
-                        </p>
-                        {medicine.expiryDate && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Expires: {new Date(medicine.expiryDate).toLocaleDateString()}
-                          </p>
-                        )}
-                        <Button
-                          size="sm"
-                          className="w-full mt-2 bg-green-600 hover:bg-green-700"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            addToCart(medicine)
-                          }}
-                          disabled={getMedicineQuantity(medicine) === 0}
+                  {filteredMedicines.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Package className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                      <p>No medicines found</p>
+                      <p className="text-sm">Try a different search term or add medicines to inventory</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {filteredMedicines.map((medicine) => (
+                        <div
+                          key={medicine.id}
+                          className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => addToCart(medicine)}
                         >
-                          <Plus className="mr-2 h-4 w-4" />
-                          {getMedicineQuantity(medicine) === 0 ? 'Out of Stock' : 'Add to Cart'}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-medium text-gray-900">{medicine.name}</h3>
+                            <Badge variant={medicine.quantity < 10 ? "destructive" : "secondary"}>
+                              {medicine.quantity} left
+                            </Badge>
+                          </div>
+                          <p className="text-lg font-bold text-emerald-600">
+                            MWK {medicine.price.toLocaleString()}
+                          </p>
+                          {medicine.expiryDate && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Expires: {new Date(medicine.expiryDate).toLocaleDateString()}
+                            </p>
+                          )}
+                          <Button
+                            size="sm"
+                            className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              addToCart(medicine)
+                            }}
+                            disabled={medicine.quantity === 0}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            {medicine.quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -309,7 +317,7 @@ export default function SalesPage() {
                       </Button>
                     )}
                   </CardTitle>
-                  <CardDescription>{cart.length} items in cart</CardDescription>
+                  <CardDescription>{cart.length} item(s) in cart</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {cart.length === 0 ? (
@@ -320,12 +328,12 @@ export default function SalesPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="space-y-4 mb-6">
+                      <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto">
                         {cart.map((item) => (
                           <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex-1">
                               <p className="font-medium text-sm">{item.name}</p>
-                              <p className="text-sm text-gray-500">MWK {(item.price || 0).toLocaleString()} each</p>
+                              <p className="text-sm text-gray-500">MWK {item.price.toLocaleString()} each</p>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Button
@@ -353,7 +361,7 @@ export default function SalesPage() {
                       <div className="border-t pt-4 space-y-4">
                         <div className="flex justify-between items-center text-lg font-bold">
                           <span>Total:</span>
-                          <span>MWK {getTotalAmount().toLocaleString()}</span>
+                          <span className="text-emerald-600">MWK {getTotalAmount().toLocaleString()}</span>
                         </div>
 
                         <div className="space-y-2">
@@ -386,12 +394,21 @@ export default function SalesPage() {
                         </div>
 
                         <Button
-                          className="w-full bg-green-600 hover:bg-green-700"
+                          className="w-full bg-emerald-600 hover:bg-emerald-700"
                           onClick={processTransaction}
-                          disabled={cart.length === 0}
+                          disabled={cart.length === 0 || isProcessing}
                         >
-                          <Receipt className="mr-2 h-4 w-4" />
-                          Complete Sale
+                          {isProcessing ? (
+                            <div className="flex items-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Processing...
+                            </div>
+                          ) : (
+                            <>
+                              <Receipt className="mr-2 h-4 w-4" />
+                              Complete Sale
+                            </>
+                          )}
                         </Button>
                       </div>
                     </>
@@ -423,7 +440,7 @@ export default function SalesPage() {
                     {cart.map((item) => (
                       <div key={item.id} className="flex justify-between text-sm mb-2">
                         <span>{item.name} x{item.quantity}</span>
-                        <span>MWK {getItemTotal(item).toLocaleString()}</span>
+                        <span>MWK {item.total.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -445,13 +462,10 @@ export default function SalesPage() {
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => {
-                  setIsReceiptModalOpen(false)
-                  setCart([])
-                }}>
+                <Button variant="outline" onClick={handleReceiptClose}>
                   Close
                 </Button>
-                <Button className="bg-green-600 hover:bg-green-700" onClick={() => window.print()}>
+                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => window.print()}>
                   Print Receipt
                 </Button>
               </div>
