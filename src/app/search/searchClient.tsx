@@ -552,7 +552,7 @@ export default function SearchPage() {
                      {/* Text */}
                      <text x="340" y="395" textAnchor="middle" fontSize="20" fontWeight="500" fill="#085041">Find your medicine nearby</text>
                      <text x="340" y="422" textAnchor="middle" fontSize="14" fill="#1D9E75">Search by name — Paracetamol, Amoxicillin, Metformin and more</text>
-                     <text x="340" y="448" textAnchor="middle" fontSize="13" fill="#888780">We'll show nearby pharmacies with stock, prices, and directions</text>
+                     <text x="340" y="448" textAnchor="middle" fontSize="13" fill="#888780">{`We'll show nearby pharmacies with stock, prices, and directions`}</text>
                    </svg>
                
                    {/* Search history chips */}
