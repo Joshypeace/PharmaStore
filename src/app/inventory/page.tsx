@@ -152,22 +152,22 @@ export default function InventoryPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
           {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Inventory Management</h1>
-            <p className="text-gray-600">Manage your pharmacy stock and monitor inventory levels</p>
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Inventory Management</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage your pharmacy stock and monitor inventory levels</p>
           </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          {/* Summary Cards - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <Card className="card-enhanced">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Items</CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summaryStats.totalItems}</div>
+                <div className="text-xl sm:text-2xl font-bold">{summaryStats.totalItems}</div>
                 <p className="text-xs text-muted-foreground">Different medications</p>
               </CardContent>
             </Card>
@@ -178,7 +178,7 @@ export default function InventoryPage() {
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{summaryStats.lowStock}</div>
+                <div className="text-xl sm:text-2xl font-bold text-orange-600">{summaryStats.lowStock}</div>
                 <p className="text-xs text-muted-foreground">Items below threshold</p>
               </CardContent>
             </Card>
@@ -189,7 +189,7 @@ export default function InventoryPage() {
                 <Calendar className="h-4 w-4 text-yellow-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{summaryStats.expiringSoon}</div>
+                <div className="text-xl sm:text-2xl font-bold text-yellow-600">{summaryStats.expiringSoon}</div>
                 <p className="text-xs text-muted-foreground">Within 30 days</p>
               </CardContent>
             </Card>
@@ -200,7 +200,7 @@ export default function InventoryPage() {
                 <Package className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{summaryStats.outOfStock}</div>
+                <div className="text-xl sm:text-2xl font-bold text-red-600">{summaryStats.outOfStock}</div>
                 <p className="text-xs text-muted-foreground">Items unavailable</p>
               </CardContent>
             </Card>
@@ -211,7 +211,7 @@ export default function InventoryPage() {
                 <DollarSign className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">
                   MWK {summaryStats.totalValue.toLocaleString('en-US')}
                 </div>
                 <p className="text-xs text-muted-foreground">Inventory value</p>
@@ -221,28 +221,28 @@ export default function InventoryPage() {
 
           {/* Filters and Actions */}
           <Card className="card-enhanced mb-6">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:justify-between sm:items-start gap-4">
                 <div>
-                  <CardTitle>Medicine Inventory</CardTitle>
-                  <CardDescription>Search and manage your pharmacy stock</CardDescription>
+                  <CardTitle className="text-lg sm:text-xl">Medicine Inventory</CardTitle>
+                  <CardDescription className="text-sm">Search and manage your pharmacy stock</CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <Button
                     onClick={() => setIsImportWizardOpen(true)}
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg rounded-xl"
+                    className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg rounded-xl text-sm"
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     Import from Excel
                   </Button>
                   <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                     <DialogTrigger asChild>
-                      <Button className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg rounded-xl">
+                      <Button className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg rounded-xl text-sm">
                         <Plus className="mr-2 h-4 w-4" />
                         Add New Stock
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
+                    <DialogContent className="sm:max-w-[425px] w-[95%] rounded-lg mx-auto">
                       <DialogHeader>
                         <DialogTitle>Add New Medicine</DialogTitle>
                         <DialogDescription>
@@ -268,7 +268,7 @@ export default function InventoryPage() {
                             onChange={(e) => setNewItem({...newItem, batch: e.target.value})}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="grid gap-2">
                             <Label htmlFor="quantity">Quantity</Label>
                             <Input
@@ -319,11 +319,11 @@ export default function InventoryPage() {
                           />
                         </div>
                       </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                      <div className="flex flex-col sm:flex-row justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="w-full sm:w-auto">
                           Cancel
                         </Button>
-                        <Button onClick={handleAddItem} className="bg-green-600 hover:bg-green-700">
+                        <Button onClick={handleAddItem} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
                           Add Medicine
                         </Button>
                       </div>
@@ -332,7 +332,7 @@ export default function InventoryPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -340,7 +340,7 @@ export default function InventoryPage() {
                     placeholder="Search by medicine name or batch number..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-sm"
                   />
                 </div>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -359,69 +359,110 @@ export default function InventoryPage() {
                 </Select>
               </div>
 
-              {/* Inventory Table */}
+              {/* Inventory Table - Responsive with horizontal scroll on mobile */}
               <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Medicine Name</TableHead>
-                      <TableHead>Batch Number</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Expiry Date</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Unit Price (MWK)</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
+                <div className="min-w-[800px] lg:min-w-full">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          Loading inventory...
-                        </TableCell>
+                        <TableHead className="text-xs sm:text-sm">Medicine Name</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Batch Number</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Quantity</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Expiry Date</TableHead>
+                        <TableHead className="hidden md:table-cell text-xs sm:text-sm">Category</TableHead>
+                        <TableHead className="hidden lg:table-cell text-xs sm:text-sm">Unit Price (MWK)</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Actions</TableHead>
                       </TableRow>
-                    ) : filteredData.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          No items found matching your criteria
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredData.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.batch}</TableCell>
-                          <TableCell>
-                            <span className={item.quantity < 10 ? 'text-orange-600 font-semibold' : ''}>
-                              {item.quantity}
-                            </span>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8">
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                            </div>
                           </TableCell>
-                          <TableCell>{item.expiry}</TableCell>
-                          <TableCell>{item.category}</TableCell>
-                          <TableCell>MWK {item.price.toLocaleString('en-US')}</TableCell>
-                          <TableCell>{getStatusBadge(item.status, item.quantity)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              {/* <Button variant="ghost" size="icon">
-                                <Edit className="h-4 w-4" />
-                              </Button> */}
+                        </TableRow>
+                      ) : filteredData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8">
+                            <p className="text-gray-500">No items found matching your criteria</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredData.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium text-sm">
+                              <div>
+                                <span className="block md:hidden text-xs text-gray-500 mb-1">Medicine:</span>
+                                {item.name}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <div>
+                                <span className="block md:hidden text-xs text-gray-500 mb-1">Batch:</span>
+                                {item.batch}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <div>
+                                <span className="block md:hidden text-xs text-gray-500 mb-1">Quantity:</span>
+                                <span className={item.quantity < 10 ? 'text-orange-600 font-semibold' : ''}>
+                                  {item.quantity}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <div>
+                                <span className="block md:hidden text-xs text-gray-500 mb-1">Expiry:</span>
+                                {item.expiry}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">{item.category}</TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">
+                              MWK {item.price.toLocaleString('en-US')}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <div>
+                                <span className="block md:hidden text-xs text-gray-500 mb-1">Status:</span>
+                                {getStatusBadge(item.status, item.quantity)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
                               <Button
                                 variant="ghost"
-                                size="icon"
-                                className="text-red-600 hover:text-red-700"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
                                 onClick={() => handleDeleteItem(item.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
+
+              {/* Pagination info */}
+              {filteredData.length > 0 && (
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
+                  <p className="text-sm text-gray-600">
+                    Showing {filteredData.length} of {inventoryData.length} items
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled className="text-sm">
+                      Previous
+                    </Button>
+                    <Button variant="outline" size="sm" disabled className="text-sm">
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </main>
