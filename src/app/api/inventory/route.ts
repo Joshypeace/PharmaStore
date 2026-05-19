@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma, Prisma } from '@/lib/prisma'
-import { InventoryItem } from '@/src/types'
 
 // GET all inventory items with pharmacy filtering
 export async function GET(request: Request) {
