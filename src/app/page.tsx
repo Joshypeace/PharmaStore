@@ -524,7 +524,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 mt-6 md:mt-8 pt-6 md:pt-8 text-center text-xs md:text-sm text-slate-400">
-            <p>&copy; 2024 PharmaStore. All rights reserved. Made with ❤️ for Malawi healthcare.</p>
+            <p>&copy; 2026 PharmaStore. All rights reserved. Made with ❤️ for Malawi healthcare.</p>
           </div>
         </div>
       </footer>
