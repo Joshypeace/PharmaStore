@@ -54,12 +54,12 @@ export default function SalesPage() {
         console.log('Fetched inventory:', data) // Debug log
         
         // Map the response correctly - handle both field name variations
-        const medicinesWithDefaults = data.map((item: any) => ({
+        const medicinesWithDefaults = data.map((item: Partial<Medicine>) => ({
           id: item.id,
-          name: item.name || item.medicine || item.medicineName || 'Unknown Medicine',
+          name: item.name ||  'Unknown Medicine',
           price: item.price || 0,
           quantity: item.quantity || 0,
-          expiryDate: item.expiry || item.expiryDate || null,
+          expiryDate: item.expiryDate || null,
           batch: item.batch || null,
           category: item.category || 'Uncategorized',
           status: item.status || 'In Stock'
