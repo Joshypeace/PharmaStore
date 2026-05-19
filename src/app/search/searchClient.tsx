@@ -483,14 +483,107 @@ export default function SearchPage() {
               <Button variant="ghost" size="sm" onClick={() => getUserLocation()}>Try Again</Button>
             </div>
           )}
-
-          {/* Results Section */}
-          {hasSearched && (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">
-                  {searchResults.length > 0 
-                    ? `${searchResults.length} pharmacy(s) with "${searchTerm}" in stock`
+          {/* Empty State — shown before first search */}
+               {!hasSearched && (
+                 <div className="flex flex-col items-center justify-center py-12">
+                   <svg
+                     width="100%"
+                     viewBox="0 0 680 480"
+                     role="img"
+                     className="max-w-xl"
+                     xmlns="http://www.w3.org/2000/svg"
+                   >
+                     <title>Medicine Finder</title>
+                     <desc>Search for medicine to find nearby pharmacies</desc>
+               
+                     {/* Soft background blobs */}
+                     <ellipse cx="200" cy="220" rx="160" ry="130" fill="#E1F5EE" opacity="0.5"/>
+                     <ellipse cx="490" cy="260" rx="130" ry="110" fill="#E6F1FB" opacity="0.45"/>
+                     <ellipse cx="340" cy="350" rx="100" ry="70" fill="#EEEDFE" opacity="0.35"/>
+               
+                     {/* Magnifying glass */}
+                     <circle cx="300" cy="210" r="105" fill="none" stroke="#1D9E75" strokeWidth="10" strokeLinecap="round"/>
+                     <circle cx="300" cy="210" r="84" fill="#E1F5EE" opacity="0.6"/>
+                     <line x1="378" y1="288" x2="440" y2="355" stroke="#1D9E75" strokeWidth="12" strokeLinecap="round"/>
+               
+                     {/* Pill 1 */}
+                     <g transform="translate(300,210) rotate(-30)">
+                       <rect x="-46" y="-16" width="92" height="32" rx="16" fill="#0F6E56"/>
+                       <rect x="-46" y="-16" width="46" height="32" rx="16" fill="#5DCAA5"/>
+                       <line x1="0" y1="-16" x2="0" y2="16" stroke="#E1F5EE" strokeWidth="1.5"/>
+                     </g>
+               
+                     {/* Pill 2 */}
+                     <g transform="translate(260,170) rotate(40)">
+                       <rect x="-28" y="-10" width="56" height="20" rx="10" fill="#185FA5"/>
+                       <rect x="-28" y="-10" width="28" height="20" rx="10" fill="#85B7EB"/>
+                       <line x1="0" y1="-10" x2="0" y2="10" stroke="#E6F1FB" strokeWidth="1"/>
+                     </g>
+               
+                     {/* Pill 3 */}
+                     <g transform="translate(330,245) rotate(-15)">
+                       <rect x="-22" y="-9" width="44" height="18" rx="9" fill="#993C1D"/>
+                       <rect x="-22" y="-9" width="22" height="18" rx="9" fill="#F0997B"/>
+                       <line x1="0" y1="-9" x2="0" y2="9" stroke="#FAECE7" strokeWidth="1"/>
+                     </g>
+               
+                     {/* Map pins */}
+                     <g transform="translate(470,190)">
+                       <path d="M0,-36 C-18,-36 -28,-22 -28,-10 C-28,14 0,36 0,36 C0,36 28,14 28,-10 C28,-22 18,-36 0,-36 Z" fill="#534AB7"/>
+                       <circle cx="0" cy="-10" r="10" fill="#EEEDFE"/>
+                     </g>
+                     <g transform="translate(138,175)">
+                       <path d="M0,-26 C-13,-26 -20,-16 -20,-7 C-20,10 0,26 0,26 C0,26 20,10 20,-7 C20,-16 13,-26 0,-26 Z" fill="#1D9E75"/>
+                       <circle cx="0" cy="-7" r="7" fill="#E1F5EE"/>
+                     </g>
+               
+                     {/* Dashed lines */}
+                     <line x1="158" y1="175" x2="210" y2="180" stroke="#1D9E75" strokeWidth="1" strokeDasharray="4 3"/>
+                     <line x1="453" y1="195" x2="390" y2="200" stroke="#534AB7" strokeWidth="1" strokeDasharray="4 3"/>
+               
+                     {/* Medicine cross */}
+                     <g transform="translate(530,140)">
+                       <rect x="-22" y="-8" width="44" height="16" rx="4" fill="#378ADD"/>
+                       <rect x="-8" y="-22" width="16" height="44" rx="4" fill="#378ADD"/>
+                       <rect x="-20" y="-6" width="40" height="12" rx="3" fill="#85B7EB"/>
+                       <rect x="-6" y="-20" width="12" height="40" rx="3" fill="#85B7EB"/>
+                     </g>
+               
+                     {/* Text */}
+                     <text x="340" y="395" textAnchor="middle" fontSize="20" fontWeight="500" fill="#085041">Find your medicine nearby</text>
+                     <text x="340" y="422" textAnchor="middle" fontSize="14" fill="#1D9E75">Search by name — Paracetamol, Amoxicillin, Metformin and more</text>
+                     <text x="340" y="448" textAnchor="middle" fontSize="13" fill="#888780">We'll show nearby pharmacies with stock, prices, and directions</text>
+                   </svg>
+               
+                   {/* Search history chips */}
+                   {searchHistory.length > 0 && (
+                     <div className="mt-6 text-center">
+                       <p className="text-sm text-gray-500 mb-2 flex items-center justify-center gap-1">
+                         <Clock className="h-3.5 w-3.5" /> Recent searches
+                       </p>
+                       <div className="flex flex-wrap justify-center gap-2">
+                         {searchHistory.map(h => (
+                           <button
+                             key={h.term}
+                             onClick={() => handleQuickSearch(h.term)}
+                             className="px-3 py-1.5 bg-white border border-gray-200 hover:border-emerald-400 rounded-full text-sm text-gray-700 transition-colors"
+                           >
+                             {h.term}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               )}
+               
+                         {/* Results Section */}
+                         {hasSearched && (
+                           <>
+                             <div className="flex justify-between items-center mb-4">
+                               <h2 className="text-xl font-bold text-gray-900">
+                                 {searchResults.length > 0 
+                                   ? `${searchResults.length} pharmacy(s) with "${searchTerm}" in stock`
                     : !isSearching && `No results for "${searchTerm}"`
                   }
                 </h2>
