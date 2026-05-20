@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Pill, ArrowLeft, Shield, CheckCircle, Loader2, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, Pill, ArrowLeft, Shield, CheckCircle, Loader2, AlertCircle, Play, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,6 +35,95 @@ interface PasswordStrength {
   }
 }
 
+function VideoTutorialModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [videoError, setVideoError] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen && videoRef.current) {
+      videoRef.current.pause()
+      videoRef.current.currentTime = 0
+    }
+  }, [isOpen])
+
+  if (!isOpen) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+              <Play className="h-4 w-4 text-emerald-600 fill-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">How to Pin Your Location</p>
+              <p className="text-xs text-gray-500">Watch this quick guide to set your pharmacy location</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+          >
+            <X className="h-4 w-4 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Video */}
+        <div className="relative bg-black aspect-video">
+          {!videoError ? (
+            <video
+              ref={videoRef}
+              className="w-full h-full object-contain"
+              controls
+              autoPlay
+              playsInline
+              onError={() => setVideoError(true)}
+              src="/videos/location-guide.mp4"
+            >
+              <track kind="captions" />
+              Your browser does not support the video tag.
+            </video>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-white p-6 text-center">
+              <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+              <p className="text-lg font-semibold mb-2">Video unavailable</p>
+              <p className="text-sm text-gray-400 mb-4">
+                The tutorial video couldn't be loaded. Please check your connection.
+              </p>
+              <div className="text-left text-sm text-gray-300 bg-gray-800 p-4 rounded-lg">
+                <p className="font-semibold mb-2">📍 Quick Guide to Pin Your Location:</p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>Type your pharmacy address in the search box</li>
+                  <li>Select the correct suggestion from the dropdown</li>
+                  <li>Verify the pin appears at your exact location</li>
+                  <li>Click "Confirm Location" to save</li>
+                </ol>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer tip */}
+        <div className="px-5 py-3 bg-emerald-50 flex items-start space-x-2">
+          <span className="text-emerald-600 text-sm">📍</span>
+          <p className="text-xs text-emerald-700">
+            Tip: Type your pharmacy address in the search box, then select the correct suggestion from the dropdown to pin your exact location.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 export default function RegisterPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
@@ -43,6 +132,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [locationData, setLocationData] = useState<LocationData | null>(null)
   const [locationError, setLocationError] = useState<string>("")
+  const [showVideoGuide, setShowVideoGuide] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
     score: 0,
     message: "Enter a password",
@@ -66,6 +156,7 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     agreeToTerms: false,
+    city: "",
   })
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -178,6 +269,7 @@ export default function RegisterPage() {
         email: formData.email.toLowerCase().trim(),
         phone: formData.phone.trim(),
         licenseNumber: formData.licenseNumber.trim(),
+        city: formData.city,
         location: locationData!.formattedAddress,
         latitude: locationData!.latitude,
         longitude: locationData!.longitude,
@@ -217,6 +309,9 @@ export default function RegisterPage() {
 
   return (
     <GoogleMapsProvider>
+      {/* ── Video Tutorial Modal ── */}
+      <VideoTutorialModal isOpen={showVideoGuide} onClose={() => setShowVideoGuide(false)} />
+
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
           {/* Back to Home */}
@@ -322,11 +417,32 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  {/* Location Picker */}
-                  <LocationPicker
-                    onLocationSelect={handleLocationSelect}
-                    error={locationError}
-                  />
+                  {/* Location Picker — wrap in a div and add the Guide button */}
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Pharmacy Location (Map Pin) <span className="text-red-500">*</span>
+                      </Label>
+                      {/* ── Guide Circle Button ── */}
+                      <button
+                        type="button"
+                        onClick={() => setShowVideoGuide(true)}
+                        className="group flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 hover:border-emerald-300 transition-all duration-200 shadow-sm"
+                        title="Watch video guide"
+                      >
+                        <div className="w-4 h-4 rounded-full bg-emerald-500 group-hover:bg-emerald-600 flex items-center justify-center transition-colors flex-shrink-0">
+                          <Play className="h-2.5 w-2.5 text-white fill-white" />
+                        </div>
+                        <span className="text-xs font-medium text-emerald-700 group-hover:text-emerald-800 transition-colors whitespace-nowrap">
+                          Guide
+                        </span>
+                      </button>
+                    </div>
+                    <LocationPicker
+                      onLocationSelect={handleLocationSelect}
+                      error={locationError}
+                    />
+                  </div>
                 </div>
 
                 {/* Contact Information */}
