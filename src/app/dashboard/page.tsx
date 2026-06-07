@@ -60,7 +60,10 @@ export default function DashboardPage() {
         <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
           <Header />
           <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 flex items-center justify-center">
-            <div>Loading dashboard data...</div>
+            <div className="flex items-center gap-2 text-emerald-600">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+              <span>Loading dashboard data...</span>
+            </div>
           </main>
         </div>
       </div>
@@ -96,82 +99,68 @@ export default function DashboardPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <Header />
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
-          {/* <Alert className="mb-6 border-amber-200 bg-amber-50">
-            <CreditCard className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="flex items-center justify-between">
-              <span className="text-amber-800">
-                <strong>Trial Period:</strong> You have 7 days left in your free trial. Upgrade now to continue using
-                all features.
-              </span>
-              <Link href="/billing">
-                <Button size="sm" className="button-primary ml-4">
-                  Upgrade Now
-                </Button>
-              </Link>
-            </AlertDescription>
-          </Alert> */}
-
-          {/* Summary Cards */}
+          {/* Summary Cards - Clean white cards without green lines */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="card-enhanced bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{`Today's Sales`}</CardTitle>
-                <DollarSign className="h-4 w-4" />
+                <CardTitle className="text-sm font-medium text-slate-600">Today's Sales</CardTitle>
+                <DollarSign className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{`MWK ${dashboardData.todaySales.toLocaleString()}`}</div>
-                <p className="text-xs opacity-90">
+                <div className="text-2xl font-bold text-slate-900">MWK {dashboardData.todaySales.toLocaleString()}</div>
+                <p className="text-xs text-emerald-600 mt-1">
                   <TrendingUp className="inline h-3 w-3 mr-1" />
                   {salesChange > 0 ? '+' : ''}{salesChange.toFixed(1)}% from yesterday
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="card-enhanced bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
-                <AlertTriangle className="h-4 w-4" />
+                <CardTitle className="text-sm font-medium text-slate-600">Low Stock Items</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{dashboardData.lowStockItems}</div>
-                <p className="text-xs opacity-90">Items need restocking</p>
+                <div className="text-2xl font-bold text-slate-900">{dashboardData.lowStockItems}</div>
+                <p className="text-xs text-slate-500 mt-1">Items need restocking</p>
               </CardContent>
             </Card>
 
-            <Card className="card-enhanced bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
-                <Calendar className="h-4 w-4" />
+                <CardTitle className="text-sm font-medium text-slate-600">Expiring Soon</CardTitle>
+                <Calendar className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{dashboardData.expiringSoonItems}</div>
-                <p className="text-xs opacity-90">Items expire within 30 days</p>
+                <div className="text-2xl font-bold text-slate-900">{dashboardData.expiringSoonItems}</div>
+                <p className="text-xs text-slate-500 mt-1">Items expire within 30 days</p>
               </CardContent>
             </Card>
 
-            <Card className="card-enhanced bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-                <Users className="h-4 w-4" />
+                <CardTitle className="text-sm font-medium text-slate-600">Active Users</CardTitle>
+                <Users className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{dashboardData.activeUsers}</div>
-                <p className="text-xs opacity-90">Staff members online</p>
+                <div className="text-2xl font-bold text-slate-900">{dashboardData.activeUsers}</div>
+                <p className="text-xs text-slate-500 mt-1">Staff members online</p>
               </CardContent>
             </Card>
           </div>
 
+          {/* Action Cards - Clean white cards without green lines */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <Link href="/reports">
-              <Card className="card-enhanced hover:shadow-lg transition-shadow cursor-pointer border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50">
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer bg-white shadow-md">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-emerald-100 rounded-lg">
                       <FileText className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-emerald-900">Generate P&L Report</h3>
-                      <p className="text-sm text-emerald-700">View detailed profit & loss statements</p>
+                      <h3 className="font-semibold text-slate-900">Generate P&L Report</h3>
+                      <p className="text-sm text-slate-500">View detailed profit & loss statements</p>
                     </div>
                   </div>
                 </CardContent>
@@ -179,44 +168,47 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/sales">
-              <Card className="card-enhanced hover:shadow-lg transition-shadow cursor-pointer border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100">
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer bg-white shadow-md">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <CreditCard className="h-5 w-5 text-blue-600" />
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <CreditCard className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-blue-900">Manage Sales </h3>
-                      <p className="text-sm text-blue-700">View and manage your sales data</p>
+                      <h3 className="font-semibold text-slate-900">Manage Sales</h3>
+                      <p className="text-sm text-slate-500">View and manage your sales data</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </Link>
 
-            <Card className="card-enhanced hover:shadow-lg transition-shadow cursor-pointer border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Package className="h-5 w-5 text-purple-600" />
+            <Link href="/inventory/import">
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer bg-white shadow-md">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <Package className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">Import Inventory</h3>
+                      <p className="text-sm text-slate-500">Flexible Excel/CSV import wizard</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-purple-900">Import Inventory</h3>
-                    <p className="text-sm text-purple-700">Flexible Excel/CSV import wizard</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
+          {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Sales Chart */}
-            <Card className="card-enhanced">
-              <CardHeader>
-                <CardTitle>Weekly Sales</CardTitle>
-                <CardDescription>Sales performance over the last 7 days</CardDescription>
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="text-slate-900">Weekly Sales</CardTitle>
+                <CardDescription className="text-slate-500">Sales performance over the last 7 days</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={dashboardData.weeklySales}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -230,12 +222,12 @@ export default function DashboardPage() {
             </Card>
 
             {/* Stock Distribution */}
-            <Card className="card-enhanced">
-              <CardHeader>
-                <CardTitle>Stock Distribution</CardTitle>
-                <CardDescription>Current inventory by category</CardDescription>
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="text-slate-900">Stock Distribution</CardTitle>
+                <CardDescription className="text-slate-500">Current inventory by category</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -263,20 +255,20 @@ export default function DashboardPage() {
 
           {/* Recent Activity & Alerts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="card-enhanced">
-              <CardHeader>
-                <CardTitle>Most Dispensed Drugs</CardTitle>
-                <CardDescription>Top selling medications this week</CardDescription>
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="text-slate-900">Most Dispensed Drugs</CardTitle>
+                <CardDescription className="text-slate-500">Top selling medications this week</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {dashboardData.topDrugs.map((drug, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-emerald-50 transition-colors duration-300">
                       <div>
                         <p className="font-medium text-slate-900">{drug.name}</p>
                         <p className="text-sm text-slate-500">{drug.quantity}</p>
                       </div>
-                      <Badge variant="secondary" className="text-emerald-600 bg-emerald-100">
+                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
                         {drug.trend}
                       </Badge>
                     </div>
@@ -285,15 +277,15 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="card-enhanced">
-              <CardHeader>
-                <CardTitle>Stock Alerts</CardTitle>
-                <CardDescription>Items requiring immediate attention</CardDescription>
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="text-slate-900">Stock Alerts</CardTitle>
+                <CardDescription className="text-slate-500">Items requiring immediate attention</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {dashboardData.stockAlerts.map((alert, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-emerald-50 transition-colors duration-300">
                       <div className="flex items-center space-x-3">
                         <div className={`w-2 h-2 rounded-full ${
                           alert.type === 'danger' ? 'bg-red-500' : 'bg-orange-500'
@@ -303,7 +295,10 @@ export default function DashboardPage() {
                           <p className="text-sm text-slate-500">{alert.level}</p>
                         </div>
                       </div>
-                      <Badge variant={alert.type === 'danger' ? 'destructive' : 'secondary'}>
+                      <Badge className={alert.type === 'danger' 
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                        : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                      }>
                         {alert.status}
                       </Badge>
                     </div>
