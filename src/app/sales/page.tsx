@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Search, Plus, Minus, ShoppingCart, CreditCard, Smartphone, Receipt, Package, AlertCircle } from 'lucide-react'
+import { Search, Plus, Minus, ShoppingCart, CreditCard, Smartphone, Receipt, Package, AlertCircle, Trash2, CheckCircle, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,6 +39,7 @@ export default function SalesPage() {
   const [availableMedicines, setAvailableMedicines] = useState<Medicine[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState('all')
 
   // Fetch medicines from the backend
   useEffect(() => {
@@ -51,12 +52,11 @@ export default function SalesPage() {
       const response = await fetch('/api/inventory')
       if (response.ok) {
         const data = await response.json()
-        console.log('Fetched inventory:', data) // Debug log
+        console.log('Fetched inventory:', data)
         
-        // Map the response correctly - handle both field name variations
         const medicinesWithDefaults = data.map((item: Partial<Medicine>) => ({
           id: item.id,
-          name: item.name ||  'Unknown Medicine',
+          name: item.name || 'Unknown Medicine',
           price: item.price || 0,
           quantity: item.quantity || 0,
           expiryDate: item.expiryDate || null,
@@ -82,7 +82,6 @@ export default function SalesPage() {
   }
 
   const addToCart = (medicine: Medicine) => {
-    // Check if there's enough stock
     if (medicine.quantity <= 0) {
       toast({ title: 'Out of Stock', description: `${medicine.name} is out of stock`, variant: 'destructive' })
       return
@@ -91,7 +90,6 @@ export default function SalesPage() {
     const existingItem = cart.find(item => item.id === medicine.id)
     
     if (existingItem) {
-      // Check if we're not exceeding available stock
       if (existingItem.quantity + 1 > medicine.quantity) {
         toast({ title: 'Stock Limit', description: `Only ${medicine.quantity} units available`, variant: 'destructive' })
         return
@@ -119,7 +117,6 @@ export default function SalesPage() {
     if (newQuantity === 0) {
       setCart(cart.filter(item => item.id !== id))
     } else {
-      // Check if we're not exceeding available stock
       const medicine = availableMedicines.find(m => m.id === id)
       
       if (medicine && newQuantity > medicine.quantity) {
@@ -133,6 +130,11 @@ export default function SalesPage() {
           : item
       ))
     }
+  }
+
+  const removeFromCart = (id: string) => {
+    setCart(cart.filter(item => item.id !== id))
+    toast({ title: 'Removed', description: 'Item removed from cart' })
   }
 
   const getTotalAmount = () => {
@@ -169,7 +171,6 @@ export default function SalesPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Refresh inventory to get updated stock levels
         await fetchMedicines()
         setIsReceiptModalOpen(true)
         toast({ title: 'Success', description: 'Sale completed successfully!' })
@@ -194,22 +195,25 @@ export default function SalesPage() {
     setCart([])
   }
 
-  // Filter medicines based on search term
-  const filteredMedicines = availableMedicines.filter(medicine =>
-    medicine.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredMedicines = availableMedicines.filter(medicine => {
+    const matchesSearch = medicine.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === 'all' || medicine.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
+
+  const categories = ['all', ...new Set(availableMedicines.map(m => m.category))]
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
           <Header />
           <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
             <div className="flex justify-center items-center h-64">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading Sales...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-200 border-t-emerald-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 font-medium">Loading Sales...</p>
               </div>
             </div>
           </main>
@@ -219,69 +223,115 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <Header />
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
           {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Sales & Dispensing</h1>
-            <p className="text-gray-600">Process sales and dispense medications to customers</p>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h1 className="text-4xl font-bold text-gray-900">Sales & Dispensing</h1>
+                <p className="text-gray-600 mt-1">Process sales and dispense medications to customers</p>
+              </div>
+              <div className="hidden md:flex items-center space-x-4">
+                <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+                  <p className="text-sm text-gray-600">Total Items</p>
+                  <p className="text-2xl font-bold text-emerald-600">{availableMedicines.length}</p>
+                </div>
+                <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+                  <p className="text-sm text-gray-600">In Cart</p>
+                  <p className="text-2xl font-bold text-blue-600">{cart.length}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Medicine Selection */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Available Medicines</CardTitle>
-                  <CardDescription>Search and add medicines to cart</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Search and Filter Section */}
+              <Card className="shadow-md border-0">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                       <Input
-                        placeholder="Search by medicine name..."
+                        placeholder="Search medicines by name..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
+                        className="pl-12 h-11 bg-white border-gray-300 text-base focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
                     </div>
+                    
+                    <div className="flex gap-2 flex-wrap">
+                      {categories.map(category => (
+                        <button
+                          key={category}
+                          onClick={() => setSelectedCategory(category)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                            selectedCategory === category
+                              ? 'bg-emerald-600 text-white shadow-md'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          {category === 'all' ? 'All Categories' : category}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                </CardContent>
+              </Card>
 
+              {/* Medicines Grid */}
+              <Card className="shadow-md border-0">
+                <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-blue-50">
+                  <CardTitle className="text-xl">Available Medicines</CardTitle>
+                  <CardDescription>{filteredMedicines.length} medicines available</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
                   {filteredMedicines.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Package className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                      <p>No medicines found</p>
-                      <p className="text-sm">Try a different search term or add medicines to inventory</p>
+                    <div className="text-center py-12">
+                      <Package className="mx-auto h-16 w-16 mb-4 text-gray-300" />
+                      <p className="text-gray-600 font-medium text-lg">No medicines found</p>
+                      <p className="text-sm text-gray-500 mt-1">Try a different search term or category</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {filteredMedicines.map((medicine) => (
                         <div
                           key={medicine.id}
-                          className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                          className="group p-4 border border-gray-200 rounded-xl hover:shadow-lg hover:border-emerald-300 transition-all duration-300 cursor-pointer bg-white"
                           onClick={() => addToCart(medicine)}
                         >
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-medium text-gray-900">{medicine.name}</h3>
-                            <Badge variant={medicine.quantity < 10 ? "destructive" : "secondary"}>
-                              {medicine.quantity} left
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors">{medicine.name}</h3>
+                              <p className="text-xs text-gray-500 mt-1">{medicine.category}</p>
+                            </div>
+                            <Badge 
+                              variant={medicine.quantity < 10 ? "destructive" : "secondary"}
+                              className={`ml-2 ${medicine.quantity < 10 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}
+                            >
+                              {medicine.quantity}
                             </Badge>
                           </div>
-                          <p className="text-lg font-bold text-emerald-600">
+                          
+                          <p className="text-2xl font-bold text-emerald-600 mb-2">
                             MWK {medicine.price.toLocaleString()}
                           </p>
+                          
                           {medicine.expiryDate && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 mb-3 flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
                               Expires: {new Date(medicine.expiryDate).toLocaleDateString()}
                             </p>
                           )}
+                          
                           <Button
                             size="sm"
-                            className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all"
                             onClick={(e) => {
                               e.stopPropagation()
                               addToCart(medicine)
@@ -299,173 +349,208 @@ export default function SalesPage() {
               </Card>
             </div>
 
-            {/* Shopping Cart */}
+            {/* Shopping Cart Sidebar */}
             <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <ShoppingCart className="mr-2 h-5 w-5" />
-                    Shopping Cart
-                    {cart.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-auto text-red-600 hover:text-red-700"
-                        onClick={clearCart}
-                      >
-                        Clear All
-                      </Button>
-                    )}
+              <Card className="shadow-md border-0 sticky top-6 max-h-[calc(100vh-200px)] flex flex-col">
+                <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-emerald-50">
+                  <CardTitle className="flex items-center text-xl">
+                    <ShoppingCart className="mr-2 h-5 w-5 text-blue-600" />
+                    Cart
                   </CardTitle>
-                  <CardDescription>{cart.length} item(s) in cart</CardDescription>
+                  <CardDescription className="mt-1">{cart.length} item(s)</CardDescription>
                 </CardHeader>
-                <CardContent>
+                
+                <CardContent className="flex-1 overflow-y-auto pt-4">
                   {cart.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <ShoppingCart className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                      <p>Cart is empty</p>
-                      <p className="text-sm">Add medicines to start a sale</p>
+                    <div className="text-center py-12">
+                      <ShoppingCart className="mx-auto h-14 w-14 mb-3 text-gray-300" />
+                      <p className="text-gray-600 font-medium">Cart is empty</p>
+                      <p className="text-sm text-gray-500 mt-1">Add medicines to start</p>
                     </div>
                   ) : (
-                    <>
-                      <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto">
-                        {cart.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="space-y-3">
+                      {cart.map((item) => (
+                        <div key={item.id} className="p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:border-emerald-300 transition-colors">
+                          <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
-                              <p className="font-medium text-sm">{item.name}</p>
-                              <p className="text-sm text-gray-500">MWK {item.price.toLocaleString()} each</p>
+                              <p className="font-semibold text-sm text-gray-900">{item.name}</p>
+                              <p className="text-xs text-gray-600 mt-1">MWK {item.price.toLocaleString()} each</p>
                             </div>
-                            <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => removeFromCart(item.id)}
+                              className="text-gray-400 hover:text-red-600 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-3">
+                            <div className="flex items-center space-x-1 bg-white rounded-lg border border-gray-300">
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-7 w-7 hover:bg-gray-200"
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="w-8 text-center font-medium">{item.quantity}</span>
+                              <span className="w-6 text-center font-semibold text-sm">{item.quantity}</span>
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-7 w-7 hover:bg-gray-200"
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
                             </div>
+                            <span className="font-bold text-emerald-600 text-sm">MWK {item.total.toLocaleString()}</span>
                           </div>
-                        ))}
-                      </div>
-
-                      <div className="border-t pt-4 space-y-4">
-                        <div className="flex justify-between items-center text-lg font-bold">
-                          <span>Total:</span>
-                          <span className="text-emerald-600">MWK {getTotalAmount().toLocaleString()}</span>
                         </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Payment Method</label>
-                          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select payment method" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cash">
-                                <div className="flex items-center">
-                                  <CreditCard className="mr-2 h-4 w-4" />
-                                  Cash
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="airtel">
-                                <div className="flex items-center">
-                                  <Smartphone className="mr-2 h-4 w-4" />
-                                  Airtel Money
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="tnm">
-                                <div className="flex items-center">
-                                  <Smartphone className="mr-2 h-4 w-4" />
-                                  TNM Mpamba
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <Button
-                          className="w-full bg-emerald-600 hover:bg-emerald-700"
-                          onClick={processTransaction}
-                          disabled={cart.length === 0 || isProcessing}
-                        >
-                          {isProcessing ? (
-                            <div className="flex items-center">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Processing...
-                            </div>
-                          ) : (
-                            <>
-                              <Receipt className="mr-2 h-4 w-4" />
-                              Complete Sale
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </>
+                      ))}
+                    </div>
                   )}
                 </CardContent>
+
+                {cart.length > 0 && (
+                  <div className="border-t bg-gradient-to-b from-white to-gray-50 p-4 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-sm text-gray-600">
+                        <span>Subtotal:</span>
+                        <span>MWK {getTotalAmount().toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-2xl font-bold text-emerald-600 pt-2 border-t">
+                        <span>Total:</span>
+                        <span>MWK {getTotalAmount().toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">Payment Method</label>
+                        <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                          <SelectTrigger className="bg-white border-gray-300">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">
+                              <div className="flex items-center">
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Cash
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="airtel">
+                              <div className="flex items-center">
+                                <Smartphone className="mr-2 h-4 w-4" />
+                                Airtel Money
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="tnm">
+                              <div className="flex items-center">
+                                <Smartphone className="mr-2 h-4 w-4" />
+                                TNM Mpamba
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-11 transition-all shadow-md hover:shadow-lg"
+                        onClick={processTransaction}
+                        disabled={cart.length === 0 || isProcessing}
+                      >
+                        {isProcessing ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                            Processing...
+                          </div>
+                        ) : (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Complete Sale
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        className="w-full text-gray-700 border-gray-300 hover:bg-gray-100"
+                        onClick={clearCart}
+                      >
+                        Clear Cart
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </Card>
             </div>
           </div>
 
           {/* Receipt Modal */}
           <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Transaction Complete</DialogTitle>
+                <DialogTitle className="flex items-center text-xl">
+                  <CheckCircle className="mr-2 h-6 w-6 text-green-600" />
+                  Transaction Complete
+                </DialogTitle>
                 <DialogDescription>
                   Sale processed successfully. Receipt generated below.
                 </DialogDescription>
               </DialogHeader>
-              <div className="py-4">
-                <div className="bg-white p-6 border rounded-lg">
-                  <div className="text-center mb-4">
-                    <h3 className="font-bold text-lg">PharmaStore Pharmacy</h3>
-                    <p className="text-sm text-gray-600">Lilongwe, Malawi</p>
-                    <p className="text-sm text-gray-600">Receipt #: RCP-{Date.now().toString().slice(-6)}</p>
-                    <p className="text-sm text-gray-600">{new Date().toLocaleString()}</p>
+              <div className="py-6">
+                <div className="bg-gradient-to-b from-white to-gray-50 p-6 border-2 border-gray-200 rounded-xl">
+                  <div className="text-center mb-6 pb-4 border-b-2">
+                    <h3 className="font-bold text-xl text-gray-900">PharmaStore Pharmacy</h3>
+                    <p className="text-sm text-gray-600 mt-1">Lilongwe, Malawi</p>
+                    <p className="text-sm text-gray-600 font-mono mt-2">Receipt #: RCP-{Date.now().toString().slice(-6)}</p>
+                    <p className="text-xs text-gray-500 mt-1">{new Date().toLocaleString()}</p>
                   </div>
                   
-                  <div className="border-t border-b py-4 mb-4">
+                  <div className="space-y-3 py-4 mb-4 border-b-2">
                     {cart.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm mb-2">
-                        <span>{item.name} x{item.quantity}</span>
-                        <span>MWK {item.total.toLocaleString()}</span>
+                      <div key={item.id} className="flex justify-between text-sm">
+                        <span className="text-gray-700">
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-gray-500 ml-2">x{item.quantity}</span>
+                        </span>
+                        <span className="font-semibold text-gray-900">MWK {item.total.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
                   
-                  <div className="flex justify-between font-bold mb-2">
-                    <span>Total:</span>
-                    <span>MWK {getTotalAmount().toLocaleString()}</span>
-                  </div>
-                  
-                  <div className="flex justify-between text-sm mb-4">
-                    <span>Payment Method:</span>
-                    <span className="capitalize">{paymentMethod}</span>
+                  <div className="space-y-2 mb-4 pb-4 border-b-2">
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>Total:</span>
+                      <span className="text-emerald-600">MWK {getTotalAmount().toLocaleString()}</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Payment Method:</span>
+                      <span className="font-semibold text-gray-900 capitalize">{paymentMethod}</span>
+                    </div>
                   </div>
 
-                  <div className="text-center text-xs text-gray-500">
-                    <p>Thank you for your purchase!</p>
-                    <p>Please come again</p>
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-medium text-gray-700">Thank you for your purchase!</p>
+                    <p className="text-xs text-gray-500">Please come again</p>
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleReceiptClose}>
+              <div className="flex justify-end gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={handleReceiptClose}
+                  className="border-gray-300 hover:bg-gray-100"
+                >
                   Close
                 </Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => window.print()}>
+                <Button 
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" 
+                  onClick={() => window.print()}
+                >
+                  <Receipt className="mr-2 h-4 w-4" />
                   Print Receipt
                 </Button>
               </div>
