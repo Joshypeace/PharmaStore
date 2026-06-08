@@ -1,96 +1,142 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+// app/api/public/place-order/route.ts
+import { NextRequest, NextResponse } from "next/server"
+import { PrismaClient } from "@prisma/client"
+const prisma = new PrismaClient()
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const {
+      userId,
       pharmacyId,
+      inventoryItemId,         // primary lookup key — always present from search results
+      medicineId,              // optional, kept for order record if available
       medicineName,
-      inventoryItemId,
       quantity,
-      customerName,
-      customerPhone,
-      customerEmail,
-      notes
+      notes,
+      reservationFee = 500,   // MWK 500 reservation fee
     } = body
 
-    console.log('Place order request:', { pharmacyId, medicineName, inventoryItemId, quantity, customerName, customerPhone })
-
-    // Validate required fields
-    if (!pharmacyId || !inventoryItemId || !quantity || !customerName || !customerPhone) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    // Validate required fields — inventoryItemId replaces medicineId as the required key
+    if (!userId || !pharmacyId || !inventoryItemId || !quantity) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      )
     }
 
-    // Get the inventory item to verify stock
-    const inventoryItem = await prisma.inventoryItem.findUnique({
-      where: { id: inventoryItemId },
-      include: { medicine: true, pharmacy: true }
+    // Get user
+    const user = await prisma.publicUser.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      )
+    }
+
+    // Look up inventory item directly by its ID, with stock and pharmacy safety checks
+    const inventoryItem = await prisma.inventoryItem.findFirst({
+      where: {
+        id: inventoryItemId,
+        pharmacyId: pharmacyId,      // ensure it belongs to the expected pharmacy
+        quantity: { gte: quantity }, // ensure enough stock
+      },
+      include: {
+        medicine: true
+      }
     })
 
     if (!inventoryItem) {
-      return NextResponse.json({ error: 'Medicine not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: "Medicine not available in requested quantity" },
+        { status: 400 }
+      )
     }
 
-    if (inventoryItem.quantity < quantity) {
-      return NextResponse.json({ error: 'Insufficient stock' }, { status: 400 })
-    }
+    // Calculate totals
+    const unitPrice = inventoryItem.price
+    const totalPrice = unitPrice * quantity
 
-    // Generate unique order number
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-    
-    // Set reservation expiry (e.g., 2 hours from now)
     const reservationExpiry = new Date()
-    reservationExpiry.setHours(reservationExpiry.getHours() + 2)
+    reservationExpiry.setHours(reservationExpiry.getHours() + 2) // 2 hour reservation window
 
-    // Create the order
-    const order = await prisma.medicineOrder.create({
+    // Generate order number
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+
+    // Resolve medicineId: prefer what was passed, fall back to what's on the inventory item
+    const resolvedMedicineId = medicineId || inventoryItem.medicineId
+
+    // Create order
+    const order = await prisma.publicOrder.create({
       data: {
         orderNumber,
-        customerName,
-        customerPhone,
-        customerEmail: customerEmail || null,
-        status: 'PENDING',
-        reservationExpiry,
-        medicineId: inventoryItem.medicineId,
+        userId: user.id,
         pharmacyId,
+        medicineId: resolvedMedicineId,
+        medicineName,
         quantity,
-        totalPrice: inventoryItem.price * quantity,
+        unitPrice,
+        totalPrice,
+        reservationFee,
         notes: notes || null,
-        reservationHistory: {
-          create: {
-            status: 'PENDING',
-            notes: 'Order placed by customer',
-            changedBy: 'customer'
-          }
+        reservationExpiry,
+        status: "PENDING",
+      }
+    })
+
+    // Create order history entry
+    await prisma.publicOrderHistory.create({
+      data: {
+        orderId: order.id,
+        status: "PENDING",
+        notes: "Order placed, awaiting pharmacy confirmation",
+        changedBy: user.name,
+      }
+    })
+
+    // Notify user
+    await prisma.publicNotification.create({
+      data: {
+        userId: user.id,
+        title: "Order Placed",
+        message: `Your order #${orderNumber} has been placed. Waiting for pharmacy confirmation.`,
+        type: "ORDER_UPDATE",
+        relatedOrderId: order.id,
+      }
+    })
+
+    // Soft-reserve: decrement inventory
+    await prisma.inventoryItem.update({
+      where: { id: inventoryItem.id },
+      data: {
+        quantity: {
+          decrement: quantity
         }
       }
     })
 
-    // Create initial order message
-    await prisma.orderMessage.create({
-      data: {
-        orderId: order.id,
-        message: `New order placed for ${quantity} x ${inventoryItem.medicine.name}. Please confirm availability.`,
-        isFromCustomer: true,
-        isFromPharmacy: false
-      }
-    })
-
-    console.log('Order created successfully:', order.orderNumber)
-
     return NextResponse.json({
       success: true,
-      orderNumber: order.orderNumber,
-      orderId: order.id,
-      message: 'Order placed successfully. The pharmacy will confirm availability.'
+      order: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        totalPrice: order.totalPrice,
+        reservationFee: order.reservationFee,
+        amountToPayAtPickup: totalPrice - reservationFee,
+        reservationExpiry: order.reservationExpiry,
+      },
+      message: "Order placed successfully! Please wait for pharmacy confirmation."
     })
-    
+
   } catch (error) {
-    console.error('Order placement error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to place order', 
-      details: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 })
+    console.error("Order placement error:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }

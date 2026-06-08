@@ -20,7 +20,9 @@ import {
   Package,
   WifiOff,
   Send,
-  MessageSquare
+  MessageSquare,
+  User,
+  LogOut
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +33,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { PublicAuthModal } from '@/components/publicAuthModal'
 
 interface Pharmacy {
   id: string
@@ -41,6 +44,7 @@ interface Pharmacy {
   phone: string
   email: string
   inventoryItemId: string
+  medicineId?: string
   price: number
   quantity: number
   distance?: number
@@ -67,6 +71,13 @@ interface SearchHistory {
   timestamp: number
 }
 
+interface PublicUser {
+  id: string
+  name: string
+  phoneNumber: string
+  email: string | null
+}
+
 export default function SearchPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -85,6 +96,12 @@ export default function SearchPage() {
   const [newMessage, setNewMessage] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
   
+  // Auth state
+  const [publicUser, setPublicUser] = useState<PublicUser | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [pendingOrder, setPendingOrder] = useState<{ pharmacy: Pharmacy; medicineName: string } | null>(null)
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false)
+  
   // Order form state
   const [selectedPharmacy, setSelectedPharmacy] = useState<Pharmacy | null>(null)
   const [orderForm, setOrderForm] = useState({
@@ -95,7 +112,20 @@ export default function SearchPage() {
     notes: ''
   })
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
-  const [orderSuccess, setOrderSuccess] = useState<{ orderNumber: string; message: string } | null>(null)
+  const [orderSuccess, setOrderSuccess] = useState<{ orderNumber: string; message: string; amountToPayAtPickup: number } | null>(null)
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const sessionToken = localStorage.getItem("publicSessionToken")
+    const user = localStorage.getItem("publicUser")
+    if (sessionToken && user) {
+      try {
+        setPublicUser(JSON.parse(user))
+      } catch (e) {
+        console.error("Failed to parse user data")
+      }
+    }
+  }, [])
 
   // Load conversations from localStorage
   useEffect(() => {
@@ -133,6 +163,37 @@ export default function SearchPage() {
     const newHistory = [{ term, timestamp: Date.now() }, ...searchHistory.filter(h => h.term !== term)].slice(0, 5)
     setSearchHistory(newHistory)
     localStorage.setItem('medicineSearchHistory', JSON.stringify(newHistory))
+  }
+
+  // Handle successful login/registration
+  const handleAuthSuccess = (user: PublicUser, sessionToken: string) => {
+    setPublicUser(user)
+    setShowAuthModal(false)
+    
+    // If there's a pending order, proceed with it
+    if (pendingOrder) {
+      // Open the order dialog directly after auth
+      setSelectedPharmacy(pendingOrder.pharmacy)
+      setOrderForm({ 
+        customerName: user.name,
+        customerPhone: user.phoneNumber,
+        customerEmail: user.email || '', 
+        quantity: 1, 
+        notes: '' 
+      })
+      setOrderSuccess(null)
+      setPendingOrder(null)
+      // Open the order dialog
+      setIsOrderDialogOpen(true)
+    }
+  }
+
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem("publicSessionToken")
+    localStorage.removeItem("publicUser")
+    setPublicUser(null)
+    toast({ title: "Logged Out", description: "You have been logged out successfully" })
   }
 
   // Send message to pharmacy
@@ -352,26 +413,42 @@ export default function SearchPage() {
     searchMedicine(term, userLocation || undefined)
   }
 
-  const openOrderDialog = (pharmacy: Pharmacy) => {
+  // Updated openOrderDialog with auth check - ONLY shows auth modal if not logged in
+  const handleOrderClick = (pharmacy: Pharmacy) => {
+    // Check if user is logged in
+    if (!publicUser) {
+      // Store the pending order and show auth modal only
+      setPendingOrder({ pharmacy, medicineName: searchTerm })
+      setShowAuthModal(true)
+      return
+    }
+    
+    // User is logged in, open order dialog directly
     setSelectedPharmacy(pharmacy)
     setOrderForm({ 
-      customerName: '', 
-      customerPhone: '', 
-      customerEmail: '', 
+      customerName: publicUser.name,
+      customerPhone: publicUser.phoneNumber,
+      customerEmail: publicUser.email || '', 
       quantity: 1, 
       notes: '' 
     })
     setOrderSuccess(null)
+    setIsOrderDialogOpen(true)
   }
 
+  // Place order using inventoryItemId as the primary lookup key
   const placeOrder = async () => {
-    if (!selectedPharmacy) return
-    
-    if (!orderForm.customerName || !orderForm.customerPhone) {
-      toast({ title: 'Error', description: 'Please provide your name and phone number', variant: 'destructive' })
+    if (!selectedPharmacy || !publicUser) {
+      toast({ title: 'Error', description: 'Please login to place an order', variant: 'destructive' })
       return
     }
 
+    // Guard: ensure inventoryItemId is present
+    if (!selectedPharmacy.inventoryItemId) {
+      toast({ title: 'Error', description: 'Invalid pharmacy selection. Please search again.', variant: 'destructive' })
+      return
+    }
+    
     if (orderForm.quantity > selectedPharmacy.quantity) {
       toast({ title: 'Error', description: `Only ${selectedPharmacy.quantity} units available`, variant: 'destructive' })
       return
@@ -383,13 +460,12 @@ export default function SearchPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          userId: publicUser.id,
           pharmacyId: selectedPharmacy.id,
+          inventoryItemId: selectedPharmacy.inventoryItemId, // primary lookup key
+          medicineId: selectedPharmacy.medicineId,           // optional, passed if available
           medicineName: searchTerm,
-          inventoryItemId: selectedPharmacy.inventoryItemId,
           quantity: orderForm.quantity,
-          customerName: orderForm.customerName,
-          customerPhone: orderForm.customerPhone,
-          customerEmail: orderForm.customerEmail,
           notes: orderForm.notes
         })
       })
@@ -398,23 +474,24 @@ export default function SearchPage() {
       if (!response.ok) throw new Error(data.error)
 
       setOrderSuccess({
-        orderNumber: data.orderNumber,
-        message: data.message
+        orderNumber: data.order.orderNumber,
+        message: data.message,
+        amountToPayAtPickup: data.order.amountToPayAtPickup
       })
       
       toast({
         title: 'Order Placed!',
-        description: `Your order #${data.orderNumber} has been placed successfully.`
+        description: `Your order #${data.order.orderNumber} has been placed successfully.`
       })
       
-      setTimeout(() => {
-        setSelectedPharmacy(null)
-        setOrderSuccess(null)
-      }, 3000)
+      // Refresh search results to update inventory
+      if (userLocation) {
+        await searchMedicine(searchTerm, userLocation)
+      }
       
     } catch (error) {
       console.error('Order error:', error)
-      toast({ title: 'Error', description: 'Failed to place order', variant: 'destructive' })
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to place order', variant: 'destructive' })
     } finally {
       setIsPlacingOrder(false)
     }
@@ -424,15 +501,51 @@ export default function SearchPage() {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${pharmacy.latitude},${pharmacy.longitude}`)
   }
 
+  // Close order dialog and reset states
+  const closeOrderDialog = () => {
+    setIsOrderDialogOpen(false)
+    setSelectedPharmacy(null)
+    setOrderSuccess(null)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white sticky top-0 z-10 shadow-lg">
         <div className="container mx-auto px-4 py-6">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 mb-4">
-              <Pill className="h-8 w-8" />
-              <h1 className="text-2xl font-bold">Medicine Finder</h1>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Pill className="h-8 w-8" />
+                <h1 className="text-2xl font-bold">Medicine Finder</h1>
+              </div>
+              
+              {/* User Menu */}
+              {publicUser ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1.5">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm font-medium">{publicUser.name}</span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleLogout}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-white hover:bg-white/20"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Sign In
+                </Button>
+              )}
             </div>
             
             {/* Search Bar */}
@@ -470,6 +583,135 @@ export default function SearchPage() {
         </div>
       </div>
 
+      {/* Auth Modal - Only shown when not logged in */}
+      <PublicAuthModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false)
+          setPendingOrder(null)
+        }}
+        onSuccess={handleAuthSuccess}
+      />
+
+      {/* Order Dialog - Only shown when logged in */}
+      <Dialog open={isOrderDialogOpen} onOpenChange={closeOrderDialog}>
+        <DialogContent className="sm:max-w-md">
+          {orderSuccess ? (
+            <div className="text-center py-8">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Order Placed!</h3>
+              <p className="text-gray-600 mb-2">Order #{orderSuccess.orderNumber}</p>
+              <p className="text-sm text-gray-500 mb-2">{orderSuccess.message}</p>
+              <div className="bg-emerald-50 p-3 rounded-lg mb-4">
+                <p className="text-sm text-gray-600">Amount to pay at pickup:</p>
+                <p className="text-xl font-bold text-emerald-600">MWK {orderSuccess.amountToPayAtPickup.toLocaleString()}</p>
+              </div>
+              <p className="text-xs text-gray-500">Please present your order number when collecting</p>
+              <Button onClick={closeOrderDialog} className="mt-6">
+                Close
+              </Button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Order {searchTerm}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="font-medium">{selectedPharmacy?.name}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Price: MWK {selectedPharmacy?.price.toLocaleString()} per unit
+                  </p>
+                  <p className="text-xs text-emerald-600 mt-2">
+                    Reservation fee: MWK 500 (deducted from total at pickup)
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Your Name *</Label>
+                  <Input
+                    value={orderForm.customerName}
+                    onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
+                    placeholder="Full name"
+                    disabled={!!publicUser}
+                  />
+                  {publicUser && (
+                    <p className="text-xs text-green-600">Using your account name</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Phone Number *</Label>
+                  <Input
+                    value={orderForm.customerPhone}
+                    onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
+                    placeholder="Phone number for updates"
+                    disabled={!!publicUser}
+                  />
+                  {publicUser && (
+                    <p className="text-xs text-green-600">Using your account phone</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Email (Optional)</Label>
+                  <Input
+                    type="email"
+                    value={orderForm.customerEmail}
+                    onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Quantity *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={selectedPharmacy?.quantity}
+                    value={orderForm.quantity}
+                    onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
+                  />
+                  <p className="text-xs text-gray-500">Max available: {selectedPharmacy?.quantity}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Notes (Optional)</Label>
+                  <Textarea
+                    value={orderForm.notes}
+                    onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
+                    placeholder="Any special instructions"
+                    rows={2}
+                  />
+                </div>
+                
+                <div className="rounded-lg bg-emerald-50 p-3">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium">MWK {((selectedPharmacy?.price || 0) * orderForm.quantity).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600">Reservation fee:</span>
+                    <span className="font-medium text-emerald-600">MWK 500</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between font-bold">
+                    <span>Pay at pickup:</span>
+                    <span className="text-emerald-700">
+                      MWK {(((selectedPharmacy?.price || 0) * orderForm.quantity) - 500).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                
+                <Button onClick={placeOrder} disabled={isPlacingOrder} className="w-full">
+                  {isPlacingOrder ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {isPlacingOrder ? 'Placing Order...' : 'Place Order & Reserve'}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -483,107 +725,108 @@ export default function SearchPage() {
               <Button variant="ghost" size="sm" onClick={() => getUserLocation()}>Try Again</Button>
             </div>
           )}
+          
           {/* Empty State — shown before first search */}
-               {!hasSearched && (
-                 <div className="flex flex-col items-center justify-center py-12">
-                   <svg
-                     width="100%"
-                     viewBox="0 0 680 480"
-                     role="img"
-                     className="max-w-xl"
-                     xmlns="http://www.w3.org/2000/svg"
-                   >
-                     <title>Medicine Finder</title>
-                     <desc>Search for medicine to find nearby pharmacies</desc>
-               
-                     {/* Soft background blobs */}
-                     <ellipse cx="200" cy="220" rx="160" ry="130" fill="#E1F5EE" opacity="0.5"/>
-                     <ellipse cx="490" cy="260" rx="130" ry="110" fill="#E6F1FB" opacity="0.45"/>
-                     <ellipse cx="340" cy="350" rx="100" ry="70" fill="#EEEDFE" opacity="0.35"/>
-               
-                     {/* Magnifying glass */}
-                     <circle cx="300" cy="210" r="105" fill="none" stroke="#1D9E75" strokeWidth="10" strokeLinecap="round"/>
-                     <circle cx="300" cy="210" r="84" fill="#E1F5EE" opacity="0.6"/>
-                     <line x1="378" y1="288" x2="440" y2="355" stroke="#1D9E75" strokeWidth="12" strokeLinecap="round"/>
-               
-                     {/* Pill 1 */}
-                     <g transform="translate(300,210) rotate(-30)">
-                       <rect x="-46" y="-16" width="92" height="32" rx="16" fill="#0F6E56"/>
-                       <rect x="-46" y="-16" width="46" height="32" rx="16" fill="#5DCAA5"/>
-                       <line x1="0" y1="-16" x2="0" y2="16" stroke="#E1F5EE" strokeWidth="1.5"/>
-                     </g>
-               
-                     {/* Pill 2 */}
-                     <g transform="translate(260,170) rotate(40)">
-                       <rect x="-28" y="-10" width="56" height="20" rx="10" fill="#185FA5"/>
-                       <rect x="-28" y="-10" width="28" height="20" rx="10" fill="#85B7EB"/>
-                       <line x1="0" y1="-10" x2="0" y2="10" stroke="#E6F1FB" strokeWidth="1"/>
-                     </g>
-               
-                     {/* Pill 3 */}
-                     <g transform="translate(330,245) rotate(-15)">
-                       <rect x="-22" y="-9" width="44" height="18" rx="9" fill="#993C1D"/>
-                       <rect x="-22" y="-9" width="22" height="18" rx="9" fill="#F0997B"/>
-                       <line x1="0" y1="-9" x2="0" y2="9" stroke="#FAECE7" strokeWidth="1"/>
-                     </g>
-               
-                     {/* Map pins */}
-                     <g transform="translate(470,190)">
-                       <path d="M0,-36 C-18,-36 -28,-22 -28,-10 C-28,14 0,36 0,36 C0,36 28,14 28,-10 C28,-22 18,-36 0,-36 Z" fill="#534AB7"/>
-                       <circle cx="0" cy="-10" r="10" fill="#EEEDFE"/>
-                     </g>
-                     <g transform="translate(138,175)">
-                       <path d="M0,-26 C-13,-26 -20,-16 -20,-7 C-20,10 0,26 0,26 C0,26 20,10 20,-7 C20,-16 13,-26 0,-26 Z" fill="#1D9E75"/>
-                       <circle cx="0" cy="-7" r="7" fill="#E1F5EE"/>
-                     </g>
-               
-                     {/* Dashed lines */}
-                     <line x1="158" y1="175" x2="210" y2="180" stroke="#1D9E75" strokeWidth="1" strokeDasharray="4 3"/>
-                     <line x1="453" y1="195" x2="390" y2="200" stroke="#534AB7" strokeWidth="1" strokeDasharray="4 3"/>
-               
-                     {/* Medicine cross */}
-                     <g transform="translate(530,140)">
-                       <rect x="-22" y="-8" width="44" height="16" rx="4" fill="#378ADD"/>
-                       <rect x="-8" y="-22" width="16" height="44" rx="4" fill="#378ADD"/>
-                       <rect x="-20" y="-6" width="40" height="12" rx="3" fill="#85B7EB"/>
-                       <rect x="-6" y="-20" width="12" height="40" rx="3" fill="#85B7EB"/>
-                     </g>
-               
-                     {/* Text */}
-                     <text x="340" y="395" textAnchor="middle" fontSize="20" fontWeight="500" fill="#085041">Find your medicine nearby</text>
-                     <text x="340" y="422" textAnchor="middle" fontSize="14" fill="#1D9E75">Search by name — Paracetamol, Amoxicillin, Metformin and more</text>
-                     <text x="340" y="448" textAnchor="middle" fontSize="13" fill="#888780">{`We'll show nearby pharmacies with stock, prices, and directions`}</text>
-                   </svg>
-               
-                   {/* Search history chips */}
-                   {searchHistory.length > 0 && (
-                     <div className="mt-6 text-center">
-                       <p className="text-sm text-gray-500 mb-2 flex items-center justify-center gap-1">
-                         <Clock className="h-3.5 w-3.5" /> Recent searches
-                       </p>
-                       <div className="flex flex-wrap justify-center gap-2">
-                         {searchHistory.map(h => (
-                           <button
-                             key={h.term}
-                             onClick={() => handleQuickSearch(h.term)}
-                             className="px-3 py-1.5 bg-white border border-gray-200 hover:border-emerald-400 rounded-full text-sm text-gray-700 transition-colors"
-                           >
-                             {h.term}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-                 </div>
-               )}
-               
-                         {/* Results Section */}
-                         {hasSearched && (
-                           <>
-                             <div className="flex justify-between items-center mb-4">
-                               <h2 className="text-xl font-bold text-gray-900">
-                                 {searchResults.length > 0 
-                                   ? `${searchResults.length} pharmacy(s) with "${searchTerm}" in stock`
+          {!hasSearched && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <svg
+                width="100%"
+                viewBox="0 0 680 480"
+                role="img"
+                className="max-w-xl"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <title>Medicine Finder</title>
+                <desc>Search for medicine to find nearby pharmacies</desc>
+          
+                {/* Soft background blobs */}
+                <ellipse cx="200" cy="220" rx="160" ry="130" fill="#E1F5EE" opacity="0.5"/>
+                <ellipse cx="490" cy="260" rx="130" ry="110" fill="#E6F1FB" opacity="0.45"/>
+                <ellipse cx="340" cy="350" rx="100" ry="70" fill="#EEEDFE" opacity="0.35"/>
+          
+                {/* Magnifying glass */}
+                <circle cx="300" cy="210" r="105" fill="none" stroke="#1D9E75" strokeWidth="10" strokeLinecap="round"/>
+                <circle cx="300" cy="210" r="84" fill="#E1F5EE" opacity="0.6"/>
+                <line x1="378" y1="288" x2="440" y2="355" stroke="#1D9E75" strokeWidth="12" strokeLinecap="round"/>
+          
+                {/* Pill 1 */}
+                <g transform="translate(300,210) rotate(-30)">
+                  <rect x="-46" y="-16" width="92" height="32" rx="16" fill="#0F6E56"/>
+                  <rect x="-46" y="-16" width="46" height="32" rx="16" fill="#5DCAA5"/>
+                  <line x1="0" y1="-16" x2="0" y2="16" stroke="#E1F5EE" strokeWidth="1.5"/>
+                </g>
+          
+                {/* Pill 2 */}
+                <g transform="translate(260,170) rotate(40)">
+                  <rect x="-28" y="-10" width="56" height="20" rx="10" fill="#185FA5"/>
+                  <rect x="-28" y="-10" width="28" height="20" rx="10" fill="#85B7EB"/>
+                  <line x1="0" y1="-10" x2="0" y2="10" stroke="#E6F1FB" strokeWidth="1"/>
+                </g>
+          
+                {/* Pill 3 */}
+                <g transform="translate(330,245) rotate(-15)">
+                  <rect x="-22" y="-9" width="44" height="18" rx="9" fill="#993C1D"/>
+                  <rect x="-22" y="-9" width="22" height="18" rx="9" fill="#F0997B"/>
+                  <line x1="0" y1="-9" x2="0" y2="9" stroke="#FAECE7" strokeWidth="1"/>
+                </g>
+          
+                {/* Map pins */}
+                <g transform="translate(470,190)">
+                  <path d="M0,-36 C-18,-36 -28,-22 -28,-10 C-28,14 0,36 0,36 C0,36 28,14 28,-10 C28,-22 18,-36 0,-36 Z" fill="#534AB7"/>
+                  <circle cx="0" cy="-10" r="10" fill="#EEEDFE"/>
+                </g>
+                <g transform="translate(138,175)">
+                  <path d="M0,-26 C-13,-26 -20,-16 -20,-7 C-20,10 0,26 0,26 C0,26 20,10 20,-7 C20,-16 13,-26 0,-26 Z" fill="#1D9E75"/>
+                  <circle cx="0" cy="-7" r="7" fill="#E1F5EE"/>
+                </g>
+          
+                {/* Dashed lines */}
+                <line x1="158" y1="175" x2="210" y2="180" stroke="#1D9E75" strokeWidth="1" strokeDasharray="4 3"/>
+                <line x1="453" y1="195" x2="390" y2="200" stroke="#534AB7" strokeWidth="1" strokeDasharray="4 3"/>
+          
+                {/* Medicine cross */}
+                <g transform="translate(530,140)">
+                  <rect x="-22" y="-8" width="44" height="16" rx="4" fill="#378ADD"/>
+                  <rect x="-8" y="-22" width="16" height="44" rx="4" fill="#378ADD"/>
+                  <rect x="-20" y="-6" width="40" height="12" rx="3" fill="#85B7EB"/>
+                  <rect x="-6" y="-20" width="12" height="40" rx="3" fill="#85B7EB"/>
+                </g>
+          
+                {/* Text */}
+                <text x="340" y="395" textAnchor="middle" fontSize="20" fontWeight="500" fill="#085041">Find your medicine nearby</text>
+                <text x="340" y="422" textAnchor="middle" fontSize="14" fill="#1D9E75">Search by name — Paracetamol, Amoxicillin, Metformin and more</text>
+                <text x="340" y="448" textAnchor="middle" fontSize="13" fill="#888780">{`We'll show nearby pharmacies with stock, prices, and directions`}</text>
+              </svg>
+          
+              {/* Search history chips */}
+              {searchHistory.length > 0 && (
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-500 mb-2 flex items-center justify-center gap-1">
+                    <Clock className="h-3.5 w-3.5" /> Recent searches
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {searchHistory.map(h => (
+                      <button
+                        key={h.term}
+                        onClick={() => handleQuickSearch(h.term)}
+                        className="px-3 py-1.5 bg-white border border-gray-200 hover:border-emerald-400 rounded-full text-sm text-gray-700 transition-colors"
+                      >
+                        {h.term}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Results Section */}
+          {hasSearched && (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {searchResults.length > 0 
+                    ? `${searchResults.length} pharmacy(s) with "${searchTerm}" in stock`
                     : !isSearching && `No results for "${searchTerm}"`
                   }
                 </h2>
@@ -622,21 +865,6 @@ export default function SearchPage() {
                               <span className="text-sm">{pharmacy.location}</span>
                             </div>
                             
-                            {/* <div className="flex flex-wrap items-center gap-4 text-sm">
-                              {pharmacy.distance !== undefined && (
-                                <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                                  <Navigation className="h-3.5 w-3.5" />
-                                  <span>{pharmacy.distance.toFixed(1)} km away</span>
-                                </div>
-                              )}
-                              {pharmacy.duration && (
-                                <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                                  <Clock className="h-3.5 w-3.5" />
-                                  <span>{pharmacy.duration}</span>
-                                </div>
-                              )}
-                            </div> */}
-                            
                             <div className="flex items-center justify-between pt-2 border-t mt-2">
                               <div className="flex items-baseline gap-1">
                                 <DollarSign className="h-4 w-4 text-emerald-600" />
@@ -654,104 +882,12 @@ export default function SearchPage() {
 
                         {/* Right - Actions */}
                         <div className="flex flex-col gap-2 min-w-[200px]">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button onClick={() => openOrderDialog(pharmacy)} className="bg-emerald-600 hover:bg-emerald-700 w-full">
-                                Order Now
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                              {orderSuccess ? (
-                                <div className="text-center py-8">
-                                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                                  <h3 className="text-xl font-semibold mb-2">Order Placed!</h3>
-                                  <p className="text-gray-600 mb-2">Order #{orderSuccess.orderNumber}</p>
-                                  <p className="text-sm text-gray-500">{orderSuccess.message}</p>
-                                  <Button onClick={() => setSelectedPharmacy(null)} className="mt-6">
-                                    Close
-                                  </Button>
-                                </div>
-                              ) : (
-                                <>
-                                  <DialogHeader>
-                                    <DialogTitle>Order {searchTerm}</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                      <p className="font-medium">{selectedPharmacy?.name}</p>
-                                      <p className="text-sm text-gray-600 mt-1">
-                                        Price: MWK {selectedPharmacy?.price.toLocaleString()} per unit
-                                      </p>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Your Name *</Label>
-                                      <Input
-                                        value={orderForm.customerName}
-                                        onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
-                                        placeholder="Full name"
-                                      />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Phone Number *</Label>
-                                      <Input
-                                        value={orderForm.customerPhone}
-                                        onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
-                                        placeholder="Phone number for updates"
-                                      />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Email (Optional)</Label>
-                                      <Input
-                                        type="email"
-                                        value={orderForm.customerEmail}
-                                        onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
-                                        placeholder="email@example.com"
-                                      />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Quantity *</Label>
-                                      <Input
-                                        type="number"
-                                        min="1"
-                                        max={selectedPharmacy?.quantity}
-                                        value={orderForm.quantity}
-                                        onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
-                                      />
-                                      <p className="text-xs text-gray-500">Max available: {selectedPharmacy?.quantity}</p>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label>Notes (Optional)</Label>
-                                      <Textarea
-                                        value={orderForm.notes}
-                                        onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
-                                        placeholder="Any special instructions"
-                                        rows={2}
-                                      />
-                                    </div>
-                                    
-                                    <div className="rounded-lg bg-emerald-50 p-3">
-                                      <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Total:</span>
-                                        <span className="font-bold text-emerald-700">
-                                          MWK {((selectedPharmacy?.price || 0) * orderForm.quantity).toLocaleString()}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    
-                                    <Button onClick={placeOrder} disabled={isPlacingOrder} className="w-full">
-                                      {isPlacingOrder ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                      {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
-                                    </Button>
-                                  </div>
-                                </>
-                              )}
-                            </DialogContent>
-                          </Dialog>
+                          <Button 
+                            onClick={() => handleOrderClick(pharmacy)} 
+                            className="bg-emerald-600 hover:bg-emerald-700 w-full"
+                          >
+                            Order Now
+                          </Button>
                           
                           <Button onClick={() => openDirections(pharmacy)} variant="outline" className="w-full">
                             <Navigation className="mr-2 h-4 w-4" /> Directions
