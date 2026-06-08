@@ -14,6 +14,7 @@ declare module "next-auth" {
   interface User extends DefaultUser {
     id: string;
     role: Role;
+    pharmacyId: string | null;
   }
 
  

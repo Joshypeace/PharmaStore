@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import {
   TrendingUp,
   TrendingDown,
@@ -67,6 +68,7 @@ interface ReorderRecommendation {
 }
 
 export default function ForecastExpiryPage() {
+   const { data: session, status } = useSession()
   const [forecasts, setForecasts] = useState<Forecast[]>([])
   const [expiringItems, setExpiringItems] = useState<ExpiringItem[]>([])
   const [reorderRecs, setReorderRecs] = useState<ReorderRecommendation[]>([])
@@ -78,7 +80,7 @@ export default function ForecastExpiryPage() {
     potentialLoss: 0
   })
 
-  const pharmacyId = "your-pharmacy-id" // Get from session
+  const pharmacyId = session?.user?.pharmacyId
 
   useEffect(() => {
     fetchData()
