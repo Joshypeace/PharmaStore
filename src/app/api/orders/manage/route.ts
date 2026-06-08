@@ -1,35 +1,33 @@
-// app/api/pharmacy/orders/manage/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
+import { getServerSession } from "next-auth"
 
 const prisma = new PrismaClient()
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { orderId, action, pharmacyId, notes } = await request.json()
-
-    if (!orderId || !action || !pharmacyId) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      )
+    const session = await getServerSession()
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const order = await prisma.publicOrder.findFirst({
-      where: {
-        id: orderId,
-        pharmacyId: pharmacyId,
-      },
+    const { orderId, action } = await request.json()
+
+    if (!orderId || !action) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    // Get the order
+    const order = await prisma.publicOrder.findUnique({
+      where: { id: orderId },
       include: {
-        user: true
+        user: true,
       }
     })
 
     if (!order) {
-      return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
 
     let updatedOrder
@@ -67,7 +65,7 @@ export async function PATCH(request: NextRequest) {
           data: {
             status: "COLLECTED",
             collectedAt: new Date(),
-            collectedBy: notes || "Pharmacy Staff",
+            collectedBy: session.user.email || "Pharmacy Staff",
           }
         })
         notificationTitle = "Order Collected"
@@ -83,7 +81,7 @@ export async function PATCH(request: NextRequest) {
           }
         })
         
-        // Return inventory back
+        // Return inventory back if it was deducted
         const inventoryItem = await prisma.inventoryItem.findFirst({
           where: {
             pharmacyId: order.pharmacyId,
@@ -102,7 +100,7 @@ export async function PATCH(request: NextRequest) {
         }
         
         notificationTitle = "Order Cancelled"
-        notificationMessage = `Order #${order.orderNumber} has been cancelled. ${notes || "Please contact the pharmacy for details."}`
+        notificationMessage = `Order #${order.orderNumber} has been cancelled.`
         break
 
       default:
@@ -114,12 +112,12 @@ export async function PATCH(request: NextRequest) {
       data: {
         orderId: order.id,
         status: updatedOrder.status,
-        notes: notes || `Order ${action} by pharmacy`,
-        changedBy: "Pharmacy Staff",
+        notes: `Order ${action}ed by pharmacy`,
+        changedBy: session.user.email || "Pharmacy Staff",
       }
     })
 
-    // Send notification to user
+    // Create notification for user
     await prisma.publicNotification.create({
       data: {
         userId: order.userId,
@@ -133,13 +131,11 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       success: true,
       order: updatedOrder,
-      message: `Order ${action} successfully`
+      message: `Order ${action}ed successfully`
     })
+    
   } catch (error) {
     console.error("Order management error:", error)
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
