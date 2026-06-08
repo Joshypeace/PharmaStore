@@ -114,10 +114,10 @@ export default function Header() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/users" className="flex items-center cursor-pointer">
+                {/* <Link href="/users" className="flex items-center cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
-                </Link>
+                </Link> */}
               </DropdownMenuItem>
               {/* <DropdownMenuItem asChild>
                 <Link href="/billing" className="flex items-center cursor-pointer">

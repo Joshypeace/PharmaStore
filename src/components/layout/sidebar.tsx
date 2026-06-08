@@ -25,7 +25,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Inventory", href: "/inventory", icon: Package },
   { name: "Sales", href: "/sales", icon: ShoppingCart },
-  { name: "Prescriptions", href: "/prescriptions", icon: FileText },
+  // { name: "Prescriptions", href: "/prescriptions", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Orders", href: "/orders", icon: Box },
   { name: "Forecast & Expiry", href: "/forecast-expiry", icon: Users },
