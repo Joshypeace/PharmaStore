@@ -28,7 +28,7 @@ const navigation = [
   { name: "Prescriptions", href: "/prescriptions", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Orders", href: "/orders", icon: Box },
-  { name: "Messages", href: "/messages", icon: MessageCircle },
+  // { name: "Messages", href: "/messages", icon: MessageCircle },
   // { name: "Users", href: "/users", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ]
