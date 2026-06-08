@@ -49,10 +49,10 @@ export default function InventoryPage() {
       const queryParams = new URLSearchParams()
       if (searchTerm) queryParams.append('search', searchTerm)
       if (selectedCategory !== 'all') queryParams.append('category', selectedCategory)
-      
+
       const response = await fetch(`/api/inventory?${queryParams.toString()}`)
       if (!response.ok) throw new Error('Failed to fetch inventory')
-      
+
       const data = await response.json()
       setInventoryData(data)
       setFilteredData(data)
@@ -64,18 +64,16 @@ export default function InventoryPage() {
     }
   }, [searchTerm, selectedCategory])
 
-  // Debounce search to avoid too many API calls
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchInventoryData()
     }, 300)
-
     return () => clearTimeout(timeoutId)
   }, [searchTerm, selectedCategory, fetchInventoryData])
 
   useEffect(() => {
-  fetchInventoryData()
-}, [])
+    fetchInventoryData()
+  }, [])
 
   const getStatusBadge = (status: string, quantity: number) => {
     if (quantity === 0) {
@@ -93,26 +91,13 @@ export default function InventoryPage() {
     try {
       const response = await fetch('/api/inventory', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newItem),
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to add item')
-      }
-
+      if (!response.ok) throw new Error('Failed to add item')
       toast.success('Item added successfully')
       setIsAddModalOpen(false)
-      setNewItem({
-        name: '',
-        batch: '',
-        quantity: 0,
-        expiry: '',
-        category: '',
-        price: 0
-      })
+      setNewItem({ name: '', batch: '', quantity: 0, expiry: '', category: '', price: 0 })
       fetchInventoryData()
     } catch (error) {
       console.error('Error adding item:', error)
@@ -122,14 +107,8 @@ export default function InventoryPage() {
 
   const handleDeleteItem = async (id: string) => {
     try {
-      const response = await fetch(`/api/inventory?id=${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete item')
-      }
-
+      const response = await fetch(`/api/inventory?id=${id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Failed to delete item')
       toast.success('Item deleted successfully')
       fetchInventoryData()
     } catch (error) {
@@ -138,7 +117,6 @@ export default function InventoryPage() {
     }
   }
 
-  // Calculate summary stats
   const summaryStats = {
     totalItems: inventoryData.length,
     lowStock: inventoryData.filter(item => item.quantity < 10 && item.quantity > 0).length,
@@ -148,7 +126,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <Header />
@@ -159,73 +137,73 @@ export default function InventoryPage() {
             <p className="text-sm sm:text-base text-gray-600">Manage your pharmacy stock and monitor inventory levels</p>
           </div>
 
-          {/* Summary Cards - Responsive Grid */}
+          {/* Summary Cards — unified style matching Dashboard */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            <Card className="card-enhanced">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Items</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-slate-600">Total Items</CardTitle>
+                <Package className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl sm:text-2xl font-bold">{summaryStats.totalItems}</div>
-                <p className="text-xs text-muted-foreground">Different medications</p>
+                <div className="text-xl sm:text-2xl font-bold text-slate-900">{summaryStats.totalItems}</div>
+                <p className="text-xs text-slate-500 mt-1">Different medications</p>
               </CardContent>
             </Card>
 
-            <Card className="card-enhanced">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-orange-500" />
+                <CardTitle className="text-sm font-medium text-slate-600">Low Stock</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl sm:text-2xl font-bold text-orange-600">{summaryStats.lowStock}</div>
-                <p className="text-xs text-muted-foreground">Items below threshold</p>
+                <div className="text-xl sm:text-2xl font-bold text-slate-900">{summaryStats.lowStock}</div>
+                <p className="text-xs text-slate-500 mt-1">Items below threshold</p>
               </CardContent>
             </Card>
 
-            <Card className="card-enhanced">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
-                <Calendar className="h-4 w-4 text-yellow-500" />
+                <CardTitle className="text-sm font-medium text-slate-600">Expiring Soon</CardTitle>
+                <Calendar className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl sm:text-2xl font-bold text-yellow-600">{summaryStats.expiringSoon}</div>
-                <p className="text-xs text-muted-foreground">Within 30 days</p>
+                <div className="text-xl sm:text-2xl font-bold text-slate-900">{summaryStats.expiringSoon}</div>
+                <p className="text-xs text-slate-500 mt-1">Within 30 days</p>
               </CardContent>
             </Card>
 
-            <Card className="card-enhanced">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
-                <Package className="h-4 w-4 text-red-500" />
+                <CardTitle className="text-sm font-medium text-slate-600">Out of Stock</CardTitle>
+                <Package className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl sm:text-2xl font-bold text-red-600">{summaryStats.outOfStock}</div>
-                <p className="text-xs text-muted-foreground">Items unavailable</p>
+                <div className="text-xl sm:text-2xl font-bold text-slate-900">{summaryStats.outOfStock}</div>
+                <p className="text-xs text-slate-500 mt-1">Items unavailable</p>
               </CardContent>
             </Card>
 
-            <Card className="card-enhanced">
+            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-500" />
+                <CardTitle className="text-sm font-medium text-slate-600">Total Value</CardTitle>
+                <DollarSign className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl sm:text-2xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-bold text-slate-900">
                   MWK {summaryStats.totalValue.toLocaleString('en-US')}
                 </div>
-                <p className="text-xs text-muted-foreground">Inventory value</p>
+                <p className="text-xs text-slate-500 mt-1">Inventory value</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Filters and Actions */}
-          <Card className="card-enhanced mb-6">
+          <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300 mb-6">
             <CardHeader className="p-4 sm:p-6">
               <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:justify-between sm:items-start gap-4">
                 <div>
-                  <CardTitle className="text-lg sm:text-xl">Medicine Inventory</CardTitle>
-                  <CardDescription className="text-sm">Search and manage your pharmacy stock</CardDescription>
+                  <CardTitle className="text-lg sm:text-xl text-slate-900">Medicine Inventory</CardTitle>
+                  <CardDescription className="text-sm text-slate-500">Search and manage your pharmacy stock</CardDescription>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <Button
@@ -323,7 +301,7 @@ export default function InventoryPage() {
                         <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="w-full sm:w-auto">
                           Cancel
                         </Button>
-                        <Button onClick={handleAddItem} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+                        <Button onClick={handleAddItem} className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto">
                           Add Medicine
                         </Button>
                       </div>
@@ -359,7 +337,6 @@ export default function InventoryPage() {
                 </Select>
               </div>
 
-              {/* Inventory Table - Responsive with horizontal scroll on mobile */}
               <div className="rounded-md border overflow-x-auto">
                 <div className="min-w-[800px] lg:min-w-full">
                   <Table>
@@ -380,7 +357,7 @@ export default function InventoryPage() {
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8">
                             <div className="flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -447,19 +424,14 @@ export default function InventoryPage() {
                 </div>
               </div>
 
-              {/* Pagination info */}
               {filteredData.length > 0 && (
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
                   <p className="text-sm text-gray-600">
                     Showing {filteredData.length} of {inventoryData.length} items
                   </p>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled className="text-sm">
-                      Previous
-                    </Button>
-                    <Button variant="outline" size="sm" disabled className="text-sm">
-                      Next
-                    </Button>
+                    <Button variant="outline" size="sm" disabled className="text-sm">Previous</Button>
+                    <Button variant="outline" size="sm" disabled className="text-sm">Next</Button>
                   </div>
                 </div>
               )}

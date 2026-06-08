@@ -4,7 +4,6 @@ import { TrendingUp, Package, AlertTriangle, Calendar, DollarSign, Users, Credit
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import Sidebar from "@/components/layout/sidebar"
 import Header from "@/components/layout/header"
 import Link from "next/link"
@@ -40,9 +39,7 @@ export default function DashboardPage() {
     try {
       setLoading(true)
       const response = await fetch('/api/dashboard')
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data')
-      }
+      if (!response.ok) throw new Error('Failed to fetch dashboard data')
       const data = await response.json()
       setDashboardData(data)
     } catch (err) {
@@ -84,12 +81,9 @@ export default function DashboardPage() {
     )
   }
 
-  if (!dashboardData) {
-    return null
-  }
+  if (!dashboardData) return null
 
-  // Calculate sales percentage change
-  const salesChange = dashboardData.yesterdaySales > 0 
+  const salesChange = dashboardData.yesterdaySales > 0
     ? ((dashboardData.todaySales - dashboardData.yesterdaySales) / dashboardData.yesterdaySales) * 100
     : 0
 
@@ -99,7 +93,8 @@ export default function DashboardPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <Header />
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
-          {/* Summary Cards - Clean white cards without green lines */}
+
+          {/* Summary Cards — unified style matching Inventory */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -107,7 +102,9 @@ export default function DashboardPage() {
                 <DollarSign className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-slate-900">MWK {dashboardData.todaySales.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-slate-900">
+                  MWK {dashboardData.todaySales.toLocaleString()}
+                </div>
                 <p className="text-xs text-emerald-600 mt-1">
                   <TrendingUp className="inline h-3 w-3 mr-1" />
                   {salesChange > 0 ? '+' : ''}{salesChange.toFixed(1)}% from yesterday
@@ -149,10 +146,10 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Action Cards - Clean white cards without green lines */}
+          {/* Action Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <Link href="/reports">
-              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer bg-white shadow-md">
+              <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-emerald-100 rounded-lg">
@@ -168,7 +165,7 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/sales">
-              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer bg-white shadow-md">
+              <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-emerald-100 rounded-lg">
@@ -184,7 +181,7 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/inventory/import">
-              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer bg-white shadow-md">
+              <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-emerald-100 rounded-lg">
@@ -202,7 +199,6 @@ export default function DashboardPage() {
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Sales Chart */}
             <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="border-b border-slate-100">
                 <CardTitle className="text-slate-900">Weekly Sales</CardTitle>
@@ -221,7 +217,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Stock Distribution */}
             <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
               <CardHeader className="border-b border-slate-100">
                 <CardTitle className="text-slate-900">Stock Distribution</CardTitle>
@@ -295,8 +290,8 @@ export default function DashboardPage() {
                           <p className="text-sm text-slate-500">{alert.level}</p>
                         </div>
                       </div>
-                      <Badge className={alert.type === 'danger' 
-                        ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                      <Badge className={alert.type === 'danger'
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
                         : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
                       }>
                         {alert.status}
