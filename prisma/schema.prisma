@@ -53,10 +53,12 @@ model Pharmacy {
   placeId                String?
   AlertSettings          AlertSettings[]
   BackupSettings         BackupSettings[]
+  favoritePharmacies     FavoritePharmacy[]
   inventory              InventoryItem[]
   medicineOrders         MedicineOrder[]
   pharmacyCommunications PharmacyCommunication?
   PharmacySettings       PharmacySettings[]
+  publicOrders           PublicOrder[]
   SecuritySettings       SecuritySettings[]
   users                  User[]
 }
@@ -82,6 +84,8 @@ model Medicine {
   name           String          @unique
   inventory      InventoryItem[]
   medicineOrders MedicineOrder[]
+  publicOrders   PublicOrder[]
+  savedMedicines SavedMedicine[]
 }
 
 model Sale {
@@ -256,6 +260,121 @@ model PharmacyCommunication {
   pharmacy            Pharmacy @relation(fields: [pharmacyId], references: [id])
 }
 
+model PublicUser {
+  id                 String               @id @default(cuid())
+  phoneNumber        String               @unique
+  name               String
+  email              String?
+  password           String
+  pin                String?
+  status             PublicUserStatus     @default(ACTIVE)
+  lastLogin          DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  favoritePharmacies FavoritePharmacy[]
+  notifications      PublicNotification[]
+  orders             PublicOrder[]
+  savedMedicines     SavedMedicine[]
+}
+
+model PublicOrder {
+  id                String               @id @default(cuid())
+  orderNumber       String               @unique
+  userId            String
+  pharmacyId        String
+  medicineId        String
+  medicineName      String
+  quantity          Int
+  unitPrice         Float
+  totalPrice        Float
+  reservationFee    Float                @default(0)
+  status            OrderStatus          @default(PENDING)
+  notes             String?
+  reservationExpiry DateTime
+  confirmedAt       DateTime?
+  readyAt           DateTime?
+  collectedAt       DateTime?
+  cancelledAt       DateTime?
+  collectedBy       String?
+  paymentReference  String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  medicine          Medicine             @relation(fields: [medicineId], references: [id])
+  pharmacy          Pharmacy             @relation(fields: [pharmacyId], references: [id])
+  user              PublicUser           @relation(fields: [userId], references: [id])
+  history           PublicOrderHistory[]
+  messages          PublicOrderMessage[]
+
+  @@index([userId, status])
+  @@index([pharmacyId, status])
+  @@index([orderNumber])
+  @@index([reservationExpiry])
+}
+
+model PublicOrderMessage {
+  id              String      @id @default(cuid())
+  orderId         String
+  message         String
+  isFromUser      Boolean     @default(false)
+  isFromPharmacy  Boolean     @default(false)
+  isSystemMessage Boolean     @default(false)
+  read            Boolean     @default(false)
+  readAt          DateTime?
+  createdAt       DateTime    @default(now())
+  order           PublicOrder @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, createdAt])
+}
+
+model PublicOrderHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  notes     String?
+  changedBy String
+  changedAt DateTime    @default(now())
+  order     PublicOrder @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+model PublicNotification {
+  id             String           @id @default(cuid())
+  userId         String
+  title          String
+  message        String
+  type           NotificationType @default(INFO)
+  isRead         Boolean          @default(false)
+  relatedOrderId String?
+  createdAt      DateTime         @default(now())
+  user           PublicUser       @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+model FavoritePharmacy {
+  id         String     @id @default(cuid())
+  userId     String
+  pharmacyId String
+  createdAt  DateTime   @default(now())
+  pharmacy   Pharmacy   @relation(fields: [pharmacyId], references: [id])
+  user       PublicUser @relation(fields: [userId], references: [id])
+
+  @@unique([userId, pharmacyId])
+}
+
+model SavedMedicine {
+  id         String     @id @default(cuid())
+  userId     String
+  medicineId String
+  createdAt  DateTime   @default(now())
+  medicine   Medicine   @relation(fields: [medicineId], references: [id])
+  user       PublicUser @relation(fields: [userId], references: [id])
+
+  @@unique([userId, medicineId])
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -321,4 +440,18 @@ enum PermissionModule {
   REPORTS
   USERS
   SETTINGS
+}
+
+enum PublicUserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum NotificationType {
+  ORDER_UPDATE
+  RESERVATION_EXPIRY
+  PROMOTION
+  INFO
+  ALERT
 }
