@@ -164,24 +164,20 @@ export default function SearchPage() {
     }
   }, [])
 
-  // Save conversations to localStorage
   const saveConversations = (conversations: Conversation[]) => {
     localStorage.setItem('pharmacyConversations', JSON.stringify(conversations))
   }
 
-  // Save search to history
   const saveToHistory = (term: string) => {
     const newHistory = [{ term, timestamp: Date.now() }, ...searchHistory.filter(h => h.term !== term)].slice(0, 5)
     setSearchHistory(newHistory)
     localStorage.setItem('medicineSearchHistory', JSON.stringify(newHistory))
   }
 
-  // Handle successful login/registration
   const handleAuthSuccess = (user: PublicUser, sessionToken: string) => {
     setPublicUser(user)
     setShowAuthModal(false)
     
-    // If there's a pending order, proceed with it
     if (pendingOrder) {
       setSelectedPharmacy(pendingOrder.pharmacy)
       setOrderForm({ 
@@ -197,7 +193,6 @@ export default function SearchPage() {
     }
   }
 
-  // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("publicSessionToken")
     localStorage.removeItem("publicUser")
@@ -205,7 +200,6 @@ export default function SearchPage() {
     toast({ title: "Logged Out", description: "You have been logged out successfully" })
   }
 
-  // Send message to pharmacy
   const sendMessageToPharmacy = async (pharmacyId: string, message: string) => {
     if (!message.trim()) return
     
@@ -229,11 +223,7 @@ export default function SearchPage() {
             isFromUser: true,
             timestamp: new Date()
           }]
-          return {
-            ...conv,
-            messages: newMessages,
-            lastMessageTime: new Date()
-          }
+          return { ...conv, messages: newMessages, lastMessageTime: new Date() }
         }
         return conv
       })
@@ -264,7 +254,6 @@ export default function SearchPage() {
     }
   }
 
-  // Open conversation with pharmacy
   const openConversation = async (pharmacy: Pharmacy) => {
     let conversation = conversations.find(c => c.pharmacyId === pharmacy.id)
     
@@ -294,12 +283,7 @@ export default function SearchPage() {
             timestamp: new Date(msg.createdAt)
           }))
           
-          const updatedConversation = {
-            ...conversation,
-            messages: updatedMessages,
-            lastMessageTime: new Date()
-          }
-          
+          const updatedConversation = { ...conversation, messages: updatedMessages, lastMessageTime: new Date() }
           setActiveConversation(updatedConversation)
           
           const updatedConversationsList = conversations.map(c => 
@@ -314,7 +298,6 @@ export default function SearchPage() {
     }
   }
 
-  // Get user location
   const getUserLocation = useCallback((): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -324,10 +307,7 @@ export default function SearchPage() {
       
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const location = { 
-            lat: position.coords.latitude, 
-            lng: position.coords.longitude 
-          }
+          const location = { lat: position.coords.latitude, lng: position.coords.longitude }
           setUserLocation(location)
           setLocationPermissionDenied(false)
           resolve(location)
@@ -343,7 +323,6 @@ export default function SearchPage() {
     })
   }, [])
 
-  // Search medicine
   const searchMedicine = useCallback(async (query: string, location?: { lat: number; lng: number }) => {
     if (!query.trim()) {
       toast({ title: 'Error', description: 'Please enter a medicine name', variant: 'destructive' })
@@ -373,16 +352,9 @@ export default function SearchPage() {
       setSearchResults(data.pharmacies || [])
       
       if (data.pharmacies?.length === 0) {
-        toast({ 
-          title: 'No Results', 
-          description: `No pharmacies found with "${query}" in stock`,
-          variant: 'destructive'
-        })
+        toast({ title: 'No Results', description: `No pharmacies found with "${query}" in stock`, variant: 'destructive' })
       } else {
-        toast({ 
-          title: 'Found!', 
-          description: `${data.pharmacies.length} pharmacy(s) have ${query} in stock`
-        })
+        toast({ title: 'Found!', description: `${data.pharmacies.length} pharmacy(s) have ${query} in stock` })
         saveToHistory(query)
         router.replace(`/search?q=${encodeURIComponent(query)}`, { scroll: false })
       }
@@ -395,7 +367,6 @@ export default function SearchPage() {
     }
   }, [getUserLocation, router])
 
-  // Initial search if query param exists
   useEffect(() => {
     if (initialQuery) {
       setSearchTerm(initialQuery)
@@ -475,10 +446,7 @@ export default function SearchPage() {
         amountToPayAtPickup: data.order.amountToPayAtPickup
       })
       
-      toast({
-        title: 'Order Placed!',
-        description: `Your order #${data.order.orderNumber} has been placed successfully.`
-      })
+      toast({ title: 'Order Placed!', description: `Your order #${data.order.orderNumber} has been placed successfully.` })
       
       if (userLocation) {
         await searchMedicine(searchTerm, userLocation)
@@ -502,7 +470,6 @@ export default function SearchPage() {
     setOrderSuccess(null)
   }
 
-  // Get user initials for avatar
   const getUserInitials = () => {
     if (!publicUser) return '?'
     return publicUser.name.charAt(0).toUpperCase()
@@ -520,7 +487,6 @@ export default function SearchPage() {
                 <h1 className="text-2xl font-bold">Medicine Finder</h1>
               </div>
               
-              {/* User Menu with Dropdown */}
               {publicUser ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -615,127 +581,133 @@ export default function SearchPage() {
         onSuccess={handleAuthSuccess}
       />
 
-      {/* Order Dialog */}
+      {/* Order Dialog — scrollable */}
       <Dialog open={isOrderDialogOpen} onOpenChange={closeOrderDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col p-0 gap-0">
           {orderSuccess ? (
-            <div className="text-center py-8">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Order Placed!</h3>
-              <p className="text-gray-600 mb-2">Order #{orderSuccess.orderNumber}</p>
-              <p className="text-sm text-gray-500 mb-4">{orderSuccess.message}</p>
-              
-              <div className="bg-emerald-50 p-3 rounded-lg mb-4">
-                <p className="text-sm text-gray-600">Amount to pay at pickup:</p>
-                <p className="text-xl font-bold text-emerald-600">MWK {orderSuccess.amountToPayAtPickup.toLocaleString()}</p>
+            <ScrollArea className="flex-1">
+              <div className="text-center py-8 px-6">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Order Placed!</h3>
+                <p className="text-gray-600 mb-2">Order #{orderSuccess.orderNumber}</p>
+                <p className="text-sm text-gray-500 mb-4">{orderSuccess.message}</p>
+                
+                <div className="bg-emerald-50 p-3 rounded-lg mb-4">
+                  <p className="text-sm text-gray-600">Amount to pay at pickup:</p>
+                  <p className="text-xl font-bold text-emerald-600">MWK {orderSuccess.amountToPayAtPickup.toLocaleString()}</p>
+                </div>
+                
+                <Button 
+                  onClick={() => {
+                    closeOrderDialog()
+                    router.push(`/orders/${orderSuccess.orderNumber}`)
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 mb-3 w-full"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Track Order Status
+                </Button>
+                
+                <Button variant="outline" onClick={closeOrderDialog} className="w-full">
+                  Close
+                </Button>
               </div>
-              
-              <Button 
-                onClick={() => {
-                  closeOrderDialog()
-                  router.push(`/orders/${orderSuccess.orderNumber}`)
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 mb-3 w-full"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Track Order Status
-              </Button>
-              
-              <Button variant="outline" onClick={closeOrderDialog} className="mt-3 w-full">
-                Close
-              </Button>
-            </div>
+            </ScrollArea>
           ) : (
             <>
-              <DialogHeader>
+              {/* Sticky header */}
+              <DialogHeader className="px-6 py-4 border-b shrink-0">
                 <DialogTitle>Order {searchTerm}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="font-medium">{selectedPharmacy?.name}</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Price: MWK {selectedPharmacy?.price.toLocaleString()} per unit
-                  </p>
-                  <p className="text-xs text-emerald-600 mt-2">
-                    Reservation fee: MWK 500 (deducted from total at pickup)
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Your Name *</Label>
-                  <Input
-                    value={orderForm.customerName}
-                    onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
-                    placeholder="Full name"
-                    disabled={!!publicUser}
-                  />
-                  {publicUser && (
-                    <p className="text-xs text-green-600">Using your account name</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Phone Number *</Label>
-                  <Input
-                    value={orderForm.customerPhone}
-                    onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
-                    placeholder="Phone number for updates"
-                    disabled={!!publicUser}
-                  />
-                  {publicUser && (
-                    <p className="text-xs text-green-600">Using your account phone</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Email (Optional)</Label>
-                  <Input
-                    type="email"
-                    value={orderForm.customerEmail}
-                    onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
-                    placeholder="email@example.com"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Quantity *</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max={selectedPharmacy?.quantity}
-                    value={orderForm.quantity}
-                    onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
-                  />
-                  <p className="text-xs text-gray-500">Max available: {selectedPharmacy?.quantity}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Notes (Optional)</Label>
-                  <Textarea
-                    value={orderForm.notes}
-                    onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
-                    placeholder="Any special instructions"
-                    rows={2}
-                  />
-                </div>
-                
-                <div className="rounded-lg bg-emerald-50 p-3">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-medium">MWK {((selectedPharmacy?.price || 0) * orderForm.quantity).toLocaleString()}</span>
+
+              {/* Scrollable form body */}
+              <ScrollArea className="flex-1 overflow-y-auto">
+                <div className="px-6 py-4 space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="font-medium">{selectedPharmacy?.name}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Price: MWK {selectedPharmacy?.price.toLocaleString()} per unit
+                    </p>
+                    <p className="text-xs text-emerald-600 mt-2">
+                      Reservation fee: MWK 500 (deducted from total at pickup)
+                    </p>
                   </div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Reservation fee:</span>
-                    <span className="font-medium text-emerald-600">MWK 500</span>
+                  
+                  <div className="space-y-2">
+                    <Label>Your Name *</Label>
+                    <Input
+                      value={orderForm.customerName}
+                      onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
+                      placeholder="Full name"
+                      disabled={!!publicUser}
+                    />
+                    {publicUser && <p className="text-xs text-green-600">Using your account name</p>}
                   </div>
-                  <div className="border-t pt-2 flex justify-between font-bold">
-                    <span>Pay at pickup:</span>
-                    <span className="text-emerald-700">
-                      MWK {(((selectedPharmacy?.price || 0) * orderForm.quantity) - 500).toLocaleString()}
-                    </span>
+                  
+                  <div className="space-y-2">
+                    <Label>Phone Number *</Label>
+                    <Input
+                      value={orderForm.customerPhone}
+                      onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
+                      placeholder="Phone number for updates"
+                      disabled={!!publicUser}
+                    />
+                    {publicUser && <p className="text-xs text-green-600">Using your account phone</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Email (Optional)</Label>
+                    <Input
+                      type="email"
+                      value={orderForm.customerEmail}
+                      onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Quantity *</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={selectedPharmacy?.quantity}
+                      value={orderForm.quantity}
+                      onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
+                    />
+                    <p className="text-xs text-gray-500">Max available: {selectedPharmacy?.quantity}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Notes (Optional)</Label>
+                    <Textarea
+                      value={orderForm.notes}
+                      onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
+                      placeholder="Any special instructions"
+                      rows={2}
+                    />
+                  </div>
+                  
+                  <div className="rounded-lg bg-emerald-50 p-3">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium">MWK {((selectedPharmacy?.price || 0) * orderForm.quantity).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-600">Reservation fee:</span>
+                      <span className="font-medium text-emerald-600">MWK 500</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold">
+                      <span>Pay at pickup:</span>
+                      <span className="text-emerald-700">
+                        MWK {(((selectedPharmacy?.price || 0) * orderForm.quantity) - 500).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                
+              </ScrollArea>
+
+              {/* Sticky footer with submit button */}
+              <div className="px-6 py-4 border-t shrink-0 bg-white">
                 <Button onClick={placeOrder} disabled={isPlacingOrder} className="w-full">
                   {isPlacingOrder ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   {isPlacingOrder ? 'Placing Order...' : 'Place Order & Reserve'}
@@ -746,7 +718,7 @@ export default function SearchPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Main Content - Keep your existing results section */}
+      {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Location Status */}
@@ -763,10 +735,57 @@ export default function SearchPage() {
           {/* Empty State */}
           {!hasSearched && (
             <div className="flex flex-col items-center justify-center py-12">
-              {/* Your existing SVG here - keeping it to save space */}
-              <div className="text-center">
-                <p className="text-gray-500 mt-4">Search for a medicine to find nearby pharmacies</p>
-              </div>
+              <svg
+                width="100%"
+                viewBox="0 0 680 480"
+                role="img"
+                className="max-w-xl"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <title>Medicine Finder</title>
+                <desc>Search for medicine to find nearby pharmacies</desc>
+                <ellipse cx="200" cy="220" rx="160" ry="130" fill="#E1F5EE" opacity="0.5"/>
+                <ellipse cx="490" cy="260" rx="130" ry="110" fill="#E6F1FB" opacity="0.45"/>
+                <ellipse cx="340" cy="350" rx="100" ry="70" fill="#EEEDFE" opacity="0.35"/>
+                <circle cx="300" cy="210" r="105" fill="none" stroke="#1D9E75" strokeWidth="10" strokeLinecap="round"/>
+                <circle cx="300" cy="210" r="84" fill="#E1F5EE" opacity="0.6"/>
+                <line x1="378" y1="288" x2="440" y2="355" stroke="#1D9E75" strokeWidth="12" strokeLinecap="round"/>
+                <g transform="translate(300,210) rotate(-30)">
+                  <rect x="-46" y="-16" width="92" height="32" rx="16" fill="#0F6E56"/>
+                  <rect x="-46" y="-16" width="46" height="32" rx="16" fill="#5DCAA5"/>
+                  <line x1="0" y1="-16" x2="0" y2="16" stroke="#E1F5EE" strokeWidth="1.5"/>
+                </g>
+                <g transform="translate(260,170) rotate(40)">
+                  <rect x="-28" y="-10" width="56" height="20" rx="10" fill="#185FA5"/>
+                  <rect x="-28" y="-10" width="28" height="20" rx="10" fill="#85B7EB"/>
+                  <line x1="0" y1="-10" x2="0" y2="10" stroke="#E6F1FB" strokeWidth="1"/>
+                </g>
+                <g transform="translate(330,245) rotate(-15)">
+                  <rect x="-22" y="-9" width="44" height="18" rx="9" fill="#993C1D"/>
+                  <rect x="-22" y="-9" width="22" height="18" rx="9" fill="#F0997B"/>
+                  <line x1="0" y1="-9" x2="0" y2="9" stroke="#FAECE7" strokeWidth="1"/>
+                </g>
+                <g transform="translate(470,190)">
+                  <path d="M0,-36 C-18,-36 -28,-22 -28,-10 C-28,14 0,36 0,36 C0,36 28,14 28,-10 C28,-22 18,-36 0,-36 Z" fill="#534AB7"/>
+                  <circle cx="0" cy="-10" r="10" fill="#EEEDFE"/>
+                </g>
+                <g transform="translate(138,175)">
+                  <path d="M0,-26 C-13,-26 -20,-16 -20,-7 C-20,10 0,26 0,26 C0,26 20,10 20,-7 C20,-16 13,-26 0,-26 Z" fill="#1D9E75"/>
+                  <circle cx="0" cy="-7" r="7" fill="#E1F5EE"/>
+                </g>
+                <line x1="158" y1="175" x2="210" y2="180" stroke="#1D9E75" strokeWidth="1" strokeDasharray="4 3"/>
+                <line x1="453" y1="195" x2="390" y2="200" stroke="#534AB7" strokeWidth="1" strokeDasharray="4 3"/>
+                <g transform="translate(530,140)">
+                  <rect x="-22" y="-8" width="44" height="16" rx="4" fill="#378ADD"/>
+                  <rect x="-8" y="-22" width="16" height="44" rx="4" fill="#378ADD"/>
+                  <rect x="-20" y="-6" width="40" height="12" rx="3" fill="#85B7EB"/>
+                  <rect x="-6" y="-20" width="12" height="40" rx="3" fill="#85B7EB"/>
+                </g>
+                <text x="340" y="395" textAnchor="middle" fontSize="20" fontWeight="500" fill="#085041">Find your medicine nearby</text>
+                <text x="340" y="422" textAnchor="middle" fontSize="14" fill="#1D9E75">Search by name — Paracetamol, Amoxicillin, Metformin and more</text>
+                <text x="340" y="448" textAnchor="middle" fontSize="13" fill="#888780">{`We'll show nearby pharmacies with stock, prices, and directions`}</text>
+              </svg>
+
               {searchHistory.length > 0 && (
                 <div className="mt-6 text-center">
                   <p className="text-sm text-gray-500 mb-2 flex items-center justify-center gap-1">
@@ -788,7 +807,7 @@ export default function SearchPage() {
             </div>
           )}
           
-          {/* Results Section - Keep your existing results rendering */}
+          {/* Results Section */}
           {hasSearched && (
             <>
               <div className="flex justify-between items-center mb-4">
@@ -809,12 +828,17 @@ export default function SearchPage() {
                 {searchResults.map((pharmacy, index) => (
                   <Card key={index} className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
                     <CardContent className="p-6">
-                      {/* Your existing pharmacy card content */}
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-2">
                             <div>
                               <h3 className="text-lg font-semibold text-gray-900">{pharmacy.name}</h3>
+                              {pharmacy.rating && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-sm text-gray-600">{pharmacy.rating}</span>
+                                </div>
+                              )}
                             </div>
                             <Badge className="bg-emerald-100 text-emerald-700">
                               <Package className="h-3 w-3 mr-1" /> In Stock
@@ -856,13 +880,13 @@ export default function SearchPage() {
                           
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button 
+                              {/* <Button 
                                 onClick={() => openConversation(pharmacy)} 
                                 variant="outline" 
                                 className="w-full"
                               >
                                 <MessageCircle className="mr-2 h-4 w-4" /> Message Pharmacy
-                              </Button>
+                              </Button> */}
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-md">
                               <DialogHeader>
@@ -937,6 +961,20 @@ export default function SearchPage() {
                   <p className="text-gray-500 max-w-md mx-auto">
                     {`We couldn't find any pharmacies with "${searchTerm}" in stock. Try searching for a different medicine or check back later.`}
                   </p>
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Popular alternatives:</h4>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {trendingSearches.filter(t => t !== searchTerm).slice(0, 3).map(term => (
+                        <button
+                          key={term}
+                          onClick={() => handleQuickSearch(term)}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                        >
+                          {term}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </>
