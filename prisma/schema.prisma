@@ -39,53 +39,64 @@ model UserPermission {
 }
 
 model Pharmacy {
-  id                     String                 @id @default(cuid())
-  name                   String                 @unique
-  licenseNumber          String                 @unique
+  id                     String                  @id @default(cuid())
+  name                   String                  @unique
+  licenseNumber          String                  @unique
   ownerName              String
-  email                  String                 @unique
+  email                  String                  @unique
   phone                  String
   location               String
   latitude               Float
   longitude              Float
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
   placeId                String?
   AlertSettings          AlertSettings[]
   BackupSettings         BackupSettings[]
+  demandForecasts        DemandForecast[]
+  expiryTrackings        ExpiryTracking[]
   favoritePharmacies     FavoritePharmacy[]
   inventory              InventoryItem[]
   medicineOrders         MedicineOrder[]
   pharmacyCommunications PharmacyCommunication?
   PharmacySettings       PharmacySettings[]
   publicOrders           PublicOrder[]
+  reorderRecommendations ReorderRecommendation[]
+  salesHistories         SalesHistory[]
   SecuritySettings       SecuritySettings[]
+  stockAlerts            StockAlert[]
   users                  User[]
 }
 
 model InventoryItem {
-  id         String    @id @default(cuid())
-  medicineId String
-  category   String
-  quantity   Int
-  price      Float
-  expiryDate DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  batch      String?
-  pharmacyId String
-  medicine   Medicine  @relation(fields: [medicineId], references: [id])
-  pharmacy   Pharmacy  @relation(fields: [pharmacyId], references: [id])
-  sales      Sale[]
+  id              String           @id @default(cuid())
+  medicineId      String
+  category        String
+  quantity        Int
+  price           Float
+  expiryDate      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  batch           String?
+  pharmacyId      String
+  expiryTrackings ExpiryTracking[]
+  medicine        Medicine         @relation(fields: [medicineId], references: [id])
+  pharmacy        Pharmacy         @relation(fields: [pharmacyId], references: [id])
+  sales           Sale[]
 }
 
 model Medicine {
-  id             String          @id @default(cuid())
-  name           String          @unique
-  inventory      InventoryItem[]
-  medicineOrders MedicineOrder[]
-  publicOrders   PublicOrder[]
-  savedMedicines SavedMedicine[]
+  id                     String                  @id @default(cuid())
+  name                   String                  @unique
+  demandForecasts        DemandForecast[]
+  expiryTrackings        ExpiryTracking[]
+  inventory              InventoryItem[]
+  medicineOrders         MedicineOrder[]
+  publicOrders           PublicOrder[]
+  reorderRecommendations ReorderRecommendation[]
+  salesHistories         SalesHistory[]
+  savedMedicines         SavedMedicine[]
+  stockAlerts            StockAlert[]
 }
 
 model Sale {
@@ -375,6 +386,124 @@ model SavedMedicine {
   @@unique([userId, medicineId])
 }
 
+model DemandForecast {
+  id                String   @id @default(cuid())
+  medicineId        String
+  pharmacyId        String
+  forecastPeriod    String
+  forecastDate      DateTime
+  predictedDemand   Int
+  confidenceLow     Int
+  confidenceHigh    Int
+  historicalAvg     Float
+  seasonalityFactor Float
+  trendFactor       Float
+  specialEvents     Json?
+  actualSales       Int?
+  accuracyScore     Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  medicine          Medicine @relation(fields: [medicineId], references: [id])
+  pharmacy          Pharmacy @relation(fields: [pharmacyId], references: [id])
+
+  @@unique([medicineId, pharmacyId, forecastDate, forecastPeriod])
+  @@index([pharmacyId, forecastDate])
+  @@index([medicineId, forecastDate])
+}
+
+model ExpiryTracking {
+  id               String        @id @default(cuid())
+  inventoryItemId  String
+  pharmacyId       String
+  medicineId       String
+  batchNumber      String
+  expiryDate       DateTime
+  quantity         Int
+  remainingDays    Int
+  status           ExpiryStatus  @default(ACTIVE)
+  alertSent30d     Boolean       @default(false)
+  alertSent7d      Boolean       @default(false)
+  alertSentExpired Boolean       @default(false)
+  discountedAt     DateTime?
+  discountPercent  Int?
+  disposedAt       DateTime?
+  disposalReason   String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  inventoryItem    InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  medicine         Medicine      @relation(fields: [medicineId], references: [id])
+  pharmacy         Pharmacy      @relation(fields: [pharmacyId], references: [id])
+
+  @@index([pharmacyId, expiryDate, status])
+  @@index([expiryDate, remainingDays])
+}
+
+model SalesHistory {
+  id           String   @id @default(cuid())
+  medicineId   String
+  pharmacyId   String
+  date         DateTime
+  quantity     Int
+  revenue      Float
+  dayOfWeek    Int
+  weekOfYear   Int
+  isWeekend    Boolean
+  isHoliday    Boolean
+  specialEvent String?
+  createdAt    DateTime @default(now())
+  medicine     Medicine @relation(fields: [medicineId], references: [id])
+  pharmacy     Pharmacy @relation(fields: [pharmacyId], references: [id])
+
+  @@unique([medicineId, pharmacyId, date])
+  @@index([pharmacyId, date])
+  @@index([medicineId, date])
+}
+
+model StockAlert {
+  id              String        @id @default(cuid())
+  pharmacyId      String
+  medicineId      String
+  alertType       AlertType
+  severity        AlertSeverity
+  currentQuantity Int
+  threshold       Int
+  expiryDate      DateTime?
+  daysRemaining   Int?
+  message         String
+  isResolved      Boolean       @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  createdAt       DateTime      @default(now())
+  medicine        Medicine      @relation(fields: [medicineId], references: [id])
+  pharmacy        Pharmacy      @relation(fields: [pharmacyId], references: [id])
+
+  @@index([pharmacyId, isResolved, severity])
+  @@index([createdAt])
+}
+
+model ReorderRecommendation {
+  id                  String          @id @default(cuid())
+  pharmacyId          String
+  medicineId          String
+  recommendedQuantity Int
+  currentStock        Int
+  dailyAverageSales   Float
+  daysUntilStockout   Int
+  bufferStock         Int
+  economicOrderQty    Int?
+  priority            ReorderPriority
+  status              ReorderStatus
+  notes               String?
+  preferredSupplier   String?
+  supplierLeadTime    Int?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  medicine            Medicine        @relation(fields: [medicineId], references: [id])
+  pharmacy            Pharmacy        @relation(fields: [pharmacyId], references: [id])
+
+  @@index([pharmacyId, status, priority])
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -454,4 +583,37 @@ enum NotificationType {
   PROMOTION
   INFO
   ALERT
+}
+
+enum ExpiryStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRING_CRITICAL
+  EXPIRED
+  DISPOSED
+}
+
+enum AlertType {
+  LOW_STOCK
+  EXPIRY
+  REORDER
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ReorderPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ReorderStatus {
+  PENDING
+  ORDERED
+  COMPLETED
+  DISMISSED
 }
