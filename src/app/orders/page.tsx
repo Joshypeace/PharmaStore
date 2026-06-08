@@ -29,11 +29,6 @@ interface PublicOrder {
   createdAt: string
   reservationExpiry: string
   medicineName: string
-  user: {
-    name: string
-    phoneNumber: string
-    email: string | null
-  }
   messages: { id: string; message: string; isFromCustomer: boolean; createdAt: string }[]
 }
 
@@ -69,7 +64,7 @@ export default function PharmacyOrdersPage() {
     }
   }
 
-  const updateOrderStatus = async (orderId: string, status: PublicOrder['status']) => {
+  const updateOrderStatus = async (orderId: string, action: string) => {
     setUpdatingStatus(orderId)
     try {
       const response = await fetch('/api/orders/manage', {
@@ -77,14 +72,15 @@ export default function PharmacyOrdersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           orderId, 
-          action: status.toLowerCase(),
+          action,
           pharmacyId: session?.user?.pharmacyId 
         })
       })
       
       if (!response.ok) throw new Error('Failed to update status')
       
-      toast({ title: 'Status Updated', description: `Order status changed to ${status.replace('_', ' ')}` })
+      const data = await response.json()
+      toast({ title: 'Status Updated', description: data.message || `Order status changed` })
       fetchOrders()
     } catch (error) {
       console.error('Error updating status:', error)
@@ -137,7 +133,7 @@ export default function PharmacyOrdersPage() {
         return (
           <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Button 
-              onClick={() => updateOrderStatus(order.id, 'CONFIRMED')} 
+              onClick={() => updateOrderStatus(order.id, 'confirm')} 
               className="bg-green-600 hover:bg-green-700 w-full sm:w-auto text-sm"
               size="sm"
               disabled={updatingStatus === order.id}
@@ -150,7 +146,7 @@ export default function PharmacyOrdersPage() {
               Confirm Order
             </Button>
             <Button 
-              onClick={() => updateOrderStatus(order.id, 'CANCELLED')} 
+              onClick={() => updateOrderStatus(order.id, 'cancel')} 
               variant="destructive"
               className="w-full sm:w-auto text-sm"
               size="sm"
@@ -163,7 +159,7 @@ export default function PharmacyOrdersPage() {
       case 'CONFIRMED':
         return (
           <Button 
-            onClick={() => updateOrderStatus(order.id, 'READY_FOR_COLLECTION')} 
+            onClick={() => updateOrderStatus(order.id, 'ready')} 
             className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-sm"
             size="sm"
             disabled={updatingStatus === order.id}
@@ -179,7 +175,7 @@ export default function PharmacyOrdersPage() {
       case 'READY_FOR_COLLECTION':
         return (
           <Button 
-            onClick={() => updateOrderStatus(order.id, 'COLLECTED')} 
+            onClick={() => updateOrderStatus(order.id, 'collected')} 
             className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto text-sm"
             size="sm"
             disabled={updatingStatus === order.id}
@@ -235,7 +231,6 @@ export default function PharmacyOrdersPage() {
               </Button>
             </div>
             
-            {/* Responsive Tabs - Horizontal scroll on mobile */}
             <div className="overflow-x-auto pb-2 mb-4 sm:mb-6">
               <Tabs defaultValue="pending" className="w-full">
                 <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
@@ -352,8 +347,10 @@ function OrderCard({
   setShowMessageDialog: (id: string | null) => void
   isCompleted?: boolean
 }) {
-  // Calculate time remaining
+  // Calculate time remaining with safe access
   const getTimeRemaining = () => {
+    if (!order.reservationExpiry) return 'N/A'
+    
     const expiry = new Date(order.reservationExpiry)
     const now = new Date()
     const diff = expiry.getTime() - now.getTime()
@@ -370,6 +367,11 @@ function OrderCard({
     return `${minutes} minutes remaining`
   }
 
+  // Safe values with defaults
+  const reservationFee = order.reservationFee ?? 500
+  const totalPrice = order.totalPrice ?? 0
+  const amountToPayAtPickup = order.amountToPayAtPickup ?? (totalPrice - reservationFee)
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="p-4 sm:p-6">
@@ -384,7 +386,6 @@ function OrderCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-        {/* Responsive Grid - 1 column on mobile, 2 on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Left Column - Customer Info */}
           <div className="space-y-2 text-sm sm:text-base">
@@ -409,26 +410,28 @@ function OrderCard({
               <div className="space-y-1 mt-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span>MWK {order.totalPrice.toLocaleString()}</span>
+                  <span>MWK {totalPrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Reservation Fee:</span>
-                  <span className="text-emerald-600">- MWK {order.reservationFee.toLocaleString()}</span>
+                  <span className="text-emerald-600">- MWK {reservationFee.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-bold border-t pt-1 mt-1">
                   <span>Customer pays at pickup:</span>
-                  <span className="text-emerald-600">MWK {order.amountToPayAtPickup.toLocaleString()}</span>
+                  <span className="text-emerald-600">MWK {amountToPayAtPickup.toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
-            <p className="text-sm">
-              <strong>Reservation Expires:</strong><br />
-              <span className="text-sm text-orange-600">{new Date(order.reservationExpiry).toLocaleString()}</span>
-              {!isCompleted && order.status !== 'CANCELLED' && order.status !== 'EXPIRED' && (
-                <span className="text-xs text-gray-500 block mt-1">({getTimeRemaining()})</span>
-              )}
-            </p>
+            {order.reservationExpiry && (
+              <p className="text-sm">
+                <strong>Reservation Expires:</strong><br />
+                <span className="text-sm text-orange-600">{new Date(order.reservationExpiry).toLocaleString()}</span>
+                {!isCompleted && order.status !== 'CANCELLED' && order.status !== 'EXPIRED' && (
+                  <span className="text-xs text-gray-500 block mt-1">({getTimeRemaining()})</span>
+                )}
+              </p>
+            )}
             
             {/* Order messages */}
             {order.messages && order.messages.length > 0 && (
@@ -460,7 +463,11 @@ function OrderCard({
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => window.open(`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '')}?text=Your%20order%20${order.orderNumber}%20is%20${order.status.replace('_', '%20')}`)}
+                  onClick={() => {
+                    const phone = order.customerPhone.replace(/[^0-9]/g, '')
+                    const message = `Your order ${order.orderNumber} is ${order.status.replace('_', ' ')}`
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`)
+                  }}
                   className="w-full text-sm"
                   size="sm"
                 >
