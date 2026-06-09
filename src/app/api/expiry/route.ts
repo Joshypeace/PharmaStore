@@ -127,3 +127,76 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+// Add DELETE endpoint for disposing expired items
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const itemId = searchParams.get("itemId")
+    const pharmacyId = searchParams.get("pharmacyId")
+
+    if (!itemId || !pharmacyId) {
+      return NextResponse.json({ error: "Item ID and Pharmacy ID required" }, { status: 400 })
+    }
+
+    // Verify the item belongs to this pharmacy
+    const inventoryItem = await prisma.inventoryItem.findFirst({
+      where: {
+        id: itemId,
+        pharmacyId: pharmacyId
+      },
+      include: {
+        medicine: true
+      }
+    })
+
+    if (!inventoryItem) {
+      return NextResponse.json({ error: "Item not found" }, { status: 404 })
+    }
+
+    // Update expiry tracking record
+    const existingTracking = await prisma.expiryTracking.findFirst({
+      where: { inventoryItemId: itemId }
+    })
+
+    if (existingTracking) {
+      await prisma.expiryTracking.update({
+        where: { id: existingTracking.id },
+        data: {
+          status: "DISPOSED",
+          disposedAt: new Date(),
+          disposalReason: "Expired - disposed by pharmacy"
+        }
+      })
+    }
+
+    // Delete the inventory item (or set quantity to 0)
+    await prisma.inventoryItem.delete({
+      where: { id: itemId }
+    })
+
+    // Create activity log
+    await prisma.activityLog.create({
+      data: {
+        type: "DELETE_STOCK",
+        message: `Disposed ${inventoryItem.quantity} units of ${inventoryItem.medicine.name} (Batch: ${inventoryItem.batch || 'N/A'}) due to expiry`,
+        userId: session.user.email,
+      }
+    })
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `Successfully disposed ${inventoryItem.medicine.name}` 
+    })
+    
+  } catch (error) {
+    console.error("Error disposing item:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}

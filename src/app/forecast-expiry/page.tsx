@@ -1,4 +1,3 @@
-// app/forecast-expiry/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -12,7 +11,6 @@ import {
   DollarSign,
   ShoppingCart,
   Trash2,
-  Tag,
   Loader2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,18 +18,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
 import Sidebar from "@/components/layout/sidebar"
 import Header from "@/components/layout/header"
 
 interface Forecast {
+  renderKey: string
   medicineId: string
   medicineName: string
   predictedDemand: number
@@ -46,6 +38,7 @@ interface Forecast {
 
 interface ExpiringItem {
   id?: string
+  uniqueKey: string
   name: string
   batchNumber: string
   quantity: number
@@ -56,6 +49,7 @@ interface ExpiringItem {
 }
 
 interface ReorderRecommendation {
+  renderKey: string
   id: string
   medicine: { name: string }
   recommendedQuantity: number
@@ -77,11 +71,11 @@ export default function ForecastExpiryPage() {
     totalExpiringItems: 0,
     criticalCount: 0,
     warningCount: 0,
-    potentialLoss: 0
+    potentialLoss: 0,
   })
   const [generatingForecast, setGeneratingForecast] = useState(false)
+  const [disposingId, setDisposingId] = useState<string | null>(null)
 
-  // Fetch pharmacy ID from API
   useEffect(() => {
     const fetchPharmacyId = async () => {
       if (session?.user?.email) {
@@ -102,11 +96,10 @@ export default function ForecastExpiryPage() {
         setLoading(false)
       }
     }
-    
+
     fetchPharmacyId()
   }, [session, status])
 
-  // Fetch data when pharmacyId is available
   useEffect(() => {
     if (pharmacyId) {
       fetchData()
@@ -115,7 +108,7 @@ export default function ForecastExpiryPage() {
 
   const fetchData = async () => {
     if (!pharmacyId) return
-    
+
     setLoading(true)
     try {
       await fetchExpiryFromInventory()
@@ -129,13 +122,18 @@ export default function ForecastExpiryPage() {
     }
   }
 
-  // Fetch forecast data
   const fetchForecastData = async () => {
     try {
       const response = await fetch(`/api/forecast?pharmacyId=${pharmacyId}`)
       if (response.ok) {
         const data = await response.json()
-        setForecasts(data.forecasts || [])
+        const forecastsData: Forecast[] = (data.forecasts || []).map(
+          (f: Omit<Forecast, "renderKey">, idx: number) => ({
+            ...f,
+            renderKey: `forecast-api-${f.medicineId}-${idx}`,
+          })
+        )
+        setForecasts(forecastsData)
       } else {
         await generateForecastFromInventory()
       }
@@ -145,47 +143,33 @@ export default function ForecastExpiryPage() {
     }
   }
 
-  // Generate demand forecast from inventory data
   const generateForecastFromInventory = async () => {
     try {
       const response = await fetch(`/api/inventory?pharmacyId=${pharmacyId}`)
       if (response.ok) {
         const data = await response.json()
         const inventory = Array.isArray(data) ? data : data.items || []
-        
+
         const generatedForecasts: Forecast[] = inventory
           .filter((item: any) => item.quantity > 0)
           .slice(0, 10)
-          .map((item: any) => {
-            const historicalAvg = Math.max(1, Math.floor(Math.random() * 20) + 1)
-            const trend = (Math.random() * 40) - 20
-            const predictedDemand = Math.max(5, Math.floor(historicalAvg * 7 * (1 + trend / 100)))
-            const confidenceLow = Math.max(1, Math.floor(predictedDemand * 0.7))
-            const confidenceHigh = Math.floor(predictedDemand * 1.3)
-            
-            let recommendation = ""
-            if (predictedDemand > item.quantity) {
-              recommendation = `Reorder soon. Current stock (${item.quantity}) may not meet forecasted demand (${predictedDemand} units over 7 days).`
-            } else if (predictedDemand > item.quantity * 0.7) {
-              recommendation = `Monitor stock levels. Forecast suggests ${Math.round((predictedDemand / item.quantity) * 100)}% of current stock may be consumed.`
-            } else {
-              recommendation = `Stock levels adequate. Forecast suggests sufficient inventory for the period.`
-            }
-            
-            return {
-              medicineId: item.id,
-              medicineName: item.name,
-              predictedDemand: predictedDemand,
-              confidenceRange: { low: confidenceLow, high: confidenceHigh },
-              factors: {
-                historicalAvg: historicalAvg,
-                trend: trend,
-                seasonality: 1
-              },
-              recommendation: recommendation
-            }
-          })
-        
+          .map((item: any, index: number) => ({
+            renderKey: `forecast-gen-${item.id ?? "unknown"}-${index}`,
+            medicineId: item.id || `temp-${index}`,
+            medicineName: item.name || "Unknown Medicine",
+            predictedDemand: Math.max(5, Math.floor((Math.random() * 20 + 5) * 7)),
+            confidenceRange: {
+              low: Math.max(1, Math.floor(Math.random() * 50) + 20),
+              high: Math.floor(Math.random() * 100) + 80,
+            },
+            factors: {
+              historicalAvg: Math.max(1, Math.floor(Math.random() * 20) + 1),
+              trend: Math.random() * 40 - 20,
+              seasonality: 1,
+            },
+            recommendation: `Stock levels adequate for ${item.name || "this item"}. Monitor regularly.`,
+          }))
+
         setForecasts(generatedForecasts)
       }
     } catch (error) {
@@ -193,14 +177,16 @@ export default function ForecastExpiryPage() {
     }
   }
 
-  // Generate demand forecast manually
   const generateDemandForecast = async () => {
     setGeneratingForecast(true)
     toast({ title: "Generating", description: "Analyzing sales patterns and demand..." })
-    
+
     try {
       await generateForecastFromInventory()
-      toast({ title: "Complete", description: `Generated forecasts for ${forecasts.length} medicines` })
+      toast({
+        title: "Complete",
+        description: `Generated forecasts for ${forecasts.length} medicines`,
+      })
     } catch (error) {
       toast({ title: "Error", description: "Failed to generate forecasts", variant: "destructive" })
     } finally {
@@ -208,46 +194,46 @@ export default function ForecastExpiryPage() {
     }
   }
 
-  // Calculate expiring items directly from inventory
   const fetchExpiryFromInventory = async () => {
     try {
-      const response = await fetch(`/api/inventory?pharmacyId=${pharmacyId}`)
+      const response = await fetch(`/api/expiry?pharmacyId=${pharmacyId}`)
       if (response.ok) {
         const data = await response.json()
         const inventory = Array.isArray(data) ? data : data.items || []
-        
+
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        
-        const expiring = inventory
+
+        const expiring: ExpiringItem[] = inventory
           .filter((item: any) => item.expiryDate)
-          .map((item: any) => {
+          .map((item: any, index: number) => {
             const expiryDate = new Date(item.expiryDate)
-            const daysRemaining = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24))
-            const totalValue = item.quantity * item.price
-            
+            const daysRemaining = Math.ceil(
+              (expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24)
+            )
             return {
               id: item.id,
-              name: item.name,
-              batchNumber: item.batch || 'N/A',
-              quantity: item.quantity,
-              price: item.price,
-              totalValue: totalValue,
-              daysRemaining: daysRemaining,
-              status: daysRemaining <= 30 ? 'Expiring Soon' : 'OK'
+              uniqueKey: `expiry-${item.id ?? "unknown"}-${item.batch ?? "default"}-${index}`,
+              name: item.name || "Unknown Medicine",
+              batchNumber: item.batch || "N/A",
+              quantity: item.quantity || 0,
+              price: item.price || 0,
+              totalValue: (item.quantity || 0) * (item.price || 0),
+              daysRemaining,
+              status: daysRemaining <= 30 ? "Expiring Soon" : "OK",
             }
           })
-          .filter((item: any) => item.daysRemaining <= 90 && item.daysRemaining > 0)
-          .sort((a: any, b: any) => a.daysRemaining - b.daysRemaining)
-        
+          .filter((item: ExpiringItem) => item.daysRemaining <= 90 && item.daysRemaining > 0)
+          .sort((a: ExpiringItem, b: ExpiringItem) => a.daysRemaining - b.daysRemaining)
+
         setExpiringItems(expiring)
         setExpiryStats({
-          totalExpiringItems: expiring.filter((i: any) => i.daysRemaining <= 30).length,
-          criticalCount: expiring.filter((i: any) => i.daysRemaining <= 7).length,
-          warningCount: expiring.filter((i: any) => i.daysRemaining > 7 && i.daysRemaining <= 30).length,
-          potentialLoss: expiring.reduce((sum: number, i: any) => sum + i.totalValue, 0)
+          totalExpiringItems: expiring.filter((i) => i.daysRemaining <= 30).length,
+          criticalCount: expiring.filter((i) => i.daysRemaining <= 7).length,
+          warningCount: expiring.filter((i) => i.daysRemaining > 7 && i.daysRemaining <= 30).length,
+          potentialLoss: expiring.reduce((sum, i) => sum + i.totalValue, 0),
         })
-        
+
         return expiring.length
       }
       return 0
@@ -257,25 +243,61 @@ export default function ForecastExpiryPage() {
     }
   }
 
-  // Scan inventory with proper loading and feedback
   const scanInventory = async () => {
     setIsScanning(true)
     toast({ title: "Scanning", description: "Checking inventory for expiring items..." })
-    
+
     try {
-      const count = await fetchExpiryFromInventory()
+      const response = await fetch(`/api/expiry?pharmacyId=${pharmacyId}&scan=true`)
+
+      if (!response.ok) {
+        throw new Error("Scan failed")
+      }
+
+      const data = await response.json()
+      const items = Array.isArray(data.items) ? data.items : []
       
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      // Map with uniqueKey to fix the React key prop error
+      const mappedItems: ExpiringItem[] = items.map((item: any, index: number) => {
+        const expiryDate = new Date(item.expiryDate)
+        const daysRemaining = Math.ceil(
+          (expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24)
+        )
+        return {
+          id: item.id,
+          uniqueKey: `scan-expiry-${item.id ?? "unknown"}-${item.batch ?? "default"}-${index}`,
+          name: item.name || "Unknown Medicine",
+          batchNumber: item.batch || "N/A",
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          totalValue: (item.quantity || 0) * (item.price || 0),
+          daysRemaining,
+          status: daysRemaining <= 30 ? "Expiring Soon" : "OK",
+        }
+      })
+
+      setExpiringItems(mappedItems)
+      setExpiryStats({
+        totalExpiringItems: data.totalExpiringItems || mappedItems.filter(i => i.daysRemaining <= 30).length,
+        criticalCount: data.criticalCount || mappedItems.filter(i => i.daysRemaining <= 7).length,
+        warningCount: data.warningCount || mappedItems.filter(i => i.daysRemaining > 7 && i.daysRemaining <= 30).length,
+        potentialLoss: data.potentialLoss || mappedItems.reduce((sum, i) => sum + i.totalValue, 0),
+      })
+
+      const count = mappedItems.length
+
       if (count > 0) {
-        toast({ 
-          title: "Scan Complete", 
+        toast({
+          title: "Scan Complete",
           description: `Found ${count} item(s) expiring within 90 days`,
-          variant: "default"
         })
       } else {
-        toast({ 
-          title: "Scan Complete", 
+        toast({
+          title: "Scan Complete",
           description: "No expiring items found. All inventory is within safe dates.",
-          variant: "default"
         })
       }
     } catch (error) {
@@ -286,37 +308,45 @@ export default function ForecastExpiryPage() {
     }
   }
 
-  // Generate reorder recommendations from inventory
   const generateReorderFromInventory = async () => {
     try {
       const response = await fetch(`/api/inventory?pharmacyId=${pharmacyId}`)
       if (response.ok) {
         const data = await response.json()
         const inventory = Array.isArray(data) ? data : data.items || []
-        
-        const recommendations = inventory
+
+        setReorderRecs([])
+        const seen = new Set<string>()
+        const recommendations: ReorderRecommendation[] = []
+
+        inventory
           .filter((item: any) => item.quantity < 20 && item.quantity > 0)
-          .map((item: any) => {
+          .forEach((item: any, index: number) => {
+            if (seen.has(item.id)) return
+            seen.add(item.id)
+
             let priority = "MEDIUM"
             if (item.quantity < 5) priority = "HIGH"
             else if (item.quantity < 10) priority = "MEDIUM"
             else priority = "LOW"
-            
-            return {
+
+            recommendations.push({
+              renderKey: `reorder-${item.id ?? "unknown"}-${index}`,
               id: item.id,
-              medicine: { name: item.name },
+              medicine: { name: item.name || "Unknown Medicine" },
               recommendedQuantity: Math.max(50, Math.ceil(item.quantity * 2)),
               currentStock: item.quantity,
               daysUntilStockout: Math.max(1, Math.ceil(item.quantity / 3)),
-              priority: priority,
-              status: "PENDING"
-            }
+              priority,
+              status: "PENDING",
+            })
           })
-          .sort((a: any, b: any) => {
-            const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 }
-            return priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder]
-          })
-        
+
+        recommendations.sort((a, b) => {
+          const priorityOrder: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+          return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3)
+        })
+
         setReorderRecs(recommendations)
       }
     } catch (error) {
@@ -326,10 +356,104 @@ export default function ForecastExpiryPage() {
 
   const handleReorderAction = async (id: string, action: string) => {
     toast({ title: "Success", description: `Order ${action}ed successfully` })
-    setReorderRecs(prev => prev.filter(rec => rec.id !== id))
+    setReorderRecs((prev) => prev.filter((rec) => rec.id !== id))
   }
 
-  // Show loading state
+  const disposeItem = async (uniqueKey: string, itemName: string) => {
+    const itemToDispose = expiringItems.find(i => i.uniqueKey === uniqueKey)
+    if (!itemToDispose) return
+
+    if (!confirm(`Are you sure you want to dispose ${itemName}? This action cannot be undone.`)) {
+      return
+    }
+
+    const itemId = itemToDispose.id
+    if (!itemId) {
+      toast({ title: "Error", description: "Item ID missing", variant: "destructive" })
+      return
+    }
+
+    // Optimistically remove from UI immediately
+    setExpiringItems((prev) => prev.filter((i) => i.uniqueKey !== uniqueKey))
+    setDisposingId(itemId)
+
+    try {
+      const response = await fetch(
+        `/api/expiry?itemId=${encodeURIComponent(itemId)}&pharmacyId=${encodeURIComponent(pharmacyId)}`,
+        { method: "DELETE" }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || "Failed to dispose item")
+      }
+
+      const data = await response.json()
+
+      toast({
+        title: "Disposed",
+        description: data.message || `${itemName} has been disposed successfully`,
+      })
+
+      // Update stats after successful disposal
+      setExpiryStats((prev) => ({
+        ...prev,
+        totalExpiringItems: itemToDispose.daysRemaining <= 30 ? Math.max(0, prev.totalExpiringItems - 1) : prev.totalExpiringItems,
+        criticalCount: itemToDispose.daysRemaining <= 7 ? Math.max(0, prev.criticalCount - 1) : prev.criticalCount,
+        warningCount: (itemToDispose.daysRemaining > 7 && itemToDispose.daysRemaining <= 30) ? Math.max(0, prev.warningCount - 1) : prev.warningCount,
+        potentialLoss: Math.max(0, prev.potentialLoss - itemToDispose.totalValue),
+      }))
+    } catch (error: any) {
+      console.error("Error disposing item:", error)
+
+      // Restore the items in UI on failure by re-fetching
+      await fetchExpiryFromInventory()
+
+      toast({
+        title: "Error",
+        description: error.message || "Failed to dispose item. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setDisposingId(null)
+    }
+  }
+
+  const statCards = [
+    {
+      key: "stat-expiring-soon",
+      label: "Expiring Soon",
+      value: expiryStats.totalExpiringItems,
+      subLabel: `${expiryStats.criticalCount} critical`,
+      subColor: "text-red-600",
+      icon: <Calendar className="h-8 w-8 text-orange-500" />,
+    },
+    {
+      key: "stat-potential-loss",
+      label: "Potential Loss",
+      value: `MWK ${expiryStats.potentialLoss.toLocaleString()}`,
+      subLabel: null,
+      subColor: null,
+      icon: <DollarSign className="h-8 w-8 text-red-500" />,
+    },
+    {
+      key: "stat-reorder-needed",
+      label: "Reorder Needed",
+      value: reorderRecs.filter((r) => r.priority === "HIGH").length,
+      subLabel: "high priority",
+      subColor: "text-slate-500",
+      icon: <ShoppingCart className="h-8 w-8 text-emerald-500" />,
+    },
+    {
+      key: "stat-active-forecasts",
+      label: "Active Forecasts",
+      value: forecasts.length,
+      subLabel: "medicines analyzed",
+      subColor: "text-slate-500",
+      icon: <TrendingUp className="h-8 w-8 text-blue-500" />,
+    },
+  ]
+
   if (status === "loading" || (status === "authenticated" && !pharmacyId && loading)) {
     return (
       <div className="flex h-screen bg-gray-50">
@@ -374,58 +498,23 @@ export default function ForecastExpiryPage() {
                 <p className="text-slate-600">AI-powered demand forecasting and expiry monitoring</p>
               </div>
 
-              {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <Card className="bg-white shadow-md">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-600">Expiring Soon</p>
-                        <p className="text-2xl font-bold text-slate-900">{expiryStats.totalExpiringItems}</p>
-                        <p className="text-xs text-red-600 mt-1">{expiryStats.criticalCount} critical</p>
+                {statCards.map((card) => (
+                  <Card key={card.key} className="bg-white shadow-md">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-slate-600">{card.label}</p>
+                          <p className="text-2xl font-bold text-slate-900">{card.value}</p>
+                          {card.subLabel && (
+                            <p className={`text-xs mt-1 ${card.subColor}`}>{card.subLabel}</p>
+                          )}
+                        </div>
+                        {card.icon}
                       </div>
-                      <Calendar className="h-8 w-8 text-orange-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white shadow-md">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-600">Potential Loss</p>
-                        <p className="text-2xl font-bold text-slate-900">MWK {expiryStats.potentialLoss.toLocaleString()}</p>
-                      </div>
-                      <DollarSign className="h-8 w-8 text-red-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white shadow-md">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-600">Reorder Needed</p>
-                        <p className="text-2xl font-bold text-slate-900">{reorderRecs.filter(r => r.priority === "HIGH").length}</p>
-                        <p className="text-xs text-slate-500">high priority</p>
-                      </div>
-                      <ShoppingCart className="h-8 w-8 text-emerald-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white shadow-md">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-600">Active Forecasts</p>
-                        <p className="text-2xl font-bold text-slate-900">{forecasts.length}</p>
-                        <p className="text-xs text-slate-500">medicines analyzed</p>
-                      </div>
-                      <TrendingUp className="h-8 w-8 text-blue-500" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
               <Tabs defaultValue="forecast" className="space-y-6">
@@ -435,15 +524,14 @@ export default function ForecastExpiryPage() {
                   <TabsTrigger value="reorder">Reorder List</TabsTrigger>
                 </TabsList>
 
-                {/* Demand Forecast Tab */}
                 <TabsContent value="forecast">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         <span>7-Day Demand Forecast</span>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={generateDemandForecast}
                           disabled={generatingForecast}
                         >
@@ -462,23 +550,34 @@ export default function ForecastExpiryPage() {
                           <div className="text-center py-12 text-slate-500">
                             <TrendingUp className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                             <p>No forecast data available.</p>
-                            <p className="text-sm mt-1">Click "Generate Forecast" to analyze demand patterns.</p>
+                            <p className="text-sm mt-1">
+                              Click "Generate Forecast" to analyze demand patterns.
+                            </p>
                           </div>
                         ) : (
                           forecasts.map((forecast) => (
-                            <div key={forecast.medicineId} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div
+                              key={forecast.renderKey}
+                              className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                            >
                               <div className="flex items-start justify-between mb-3">
                                 <div>
-                                  <h3 className="font-semibold text-slate-900">{forecast.medicineName}</h3>
+                                  <h3 className="font-semibold text-slate-900">
+                                    {forecast.medicineName}
+                                  </h3>
                                   <div className="flex items-center gap-4 mt-1 text-sm text-slate-600">
-                                    <span>Historical avg: {forecast.factors.historicalAvg.toFixed(1)}/day</span>
+                                    <span>
+                                      Historical avg: {forecast.factors.historicalAvg.toFixed(1)}/day
+                                    </span>
                                     {forecast.factors.trend > 0 ? (
                                       <span className="flex items-center text-green-600">
-                                        <TrendingUp className="h-3 w-3 mr-1" /> +{forecast.factors.trend.toFixed(1)}% trend
+                                        <TrendingUp className="h-3 w-3 mr-1" />
+                                        +{forecast.factors.trend.toFixed(1)}% trend
                                       </span>
                                     ) : (
                                       <span className="flex items-center text-red-600">
-                                        <TrendingDown className="h-3 w-3 mr-1" /> {forecast.factors.trend.toFixed(1)}% trend
+                                        <TrendingDown className="h-3 w-3 mr-1" />
+                                        {forecast.factors.trend.toFixed(1)}% trend
                                       </span>
                                     )}
                                   </div>
@@ -491,10 +590,15 @@ export default function ForecastExpiryPage() {
                               <div className="mb-3">
                                 <div className="flex justify-between text-sm text-slate-600 mb-1">
                                   <span>Confidence Range</span>
-                                  <span>{forecast.confidenceRange.low} - {forecast.confidenceRange.high} units</span>
+                                  <span>
+                                    {forecast.confidenceRange.low} - {forecast.confidenceRange.high}{" "}
+                                    units
+                                  </span>
                                 </div>
                                 <Progress
-                                  value={(forecast.predictedDemand / forecast.confidenceRange.high) * 100}
+                                  value={
+                                    (forecast.predictedDemand / forecast.confidenceRange.high) * 100
+                                  }
                                   className="h-2"
                                 />
                               </div>
@@ -510,15 +614,14 @@ export default function ForecastExpiryPage() {
                   </Card>
                 </TabsContent>
 
-                {/* Expiry Monitor Tab */}
                 <TabsContent value="expiry">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         <span>Expiring Inventory</span>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={scanInventory}
                           disabled={isScanning}
                         >
@@ -541,18 +644,30 @@ export default function ForecastExpiryPage() {
                         <div className="text-center py-12 text-slate-500">
                           <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                           <p>No expiring items found.</p>
-                          <p className="text-sm mt-1">Click "Scan Inventory" to check for expiring medicines.</p>
+                          <p className="text-sm mt-1">
+                            Click "Scan Inventory" to check for expiring medicines.
+                          </p>
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          {expiringItems.map((item, idx) => (
-                            <div key={idx} className="border rounded-lg p-4">
+                          {expiringItems.map((item) => (
+                            <div key={item.uniqueKey} className="border rounded-lg p-4">
                               <div className="flex items-start justify-between mb-3">
                                 <div>
                                   <h3 className="font-semibold text-slate-900">{item.name}</h3>
-                                  <p className="text-sm text-slate-500">Batch: {item.batchNumber}</p>
+                                  <p className="text-sm text-slate-500">
+                                    Batch: {item.batchNumber}
+                                  </p>
                                 </div>
-                                <Badge className={item.daysRemaining <= 7 ? "bg-red-100 text-red-700" : item.daysRemaining <= 30 ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}>
+                                <Badge
+                                  className={
+                                    item.daysRemaining <= 7
+                                      ? "bg-red-100 text-red-700"
+                                      : item.daysRemaining <= 30
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : "bg-green-100 text-green-700"
+                                  }
+                                >
                                   {item.daysRemaining} days left
                                 </Badge>
                               </div>
@@ -568,43 +683,25 @@ export default function ForecastExpiryPage() {
                                 </div>
                                 <div>
                                   <p className="text-slate-500">Total Value</p>
-                                  <p className="font-medium text-red-600">MWK {item.totalValue.toLocaleString()}</p>
+                                  <p className="font-medium text-red-600">
+                                    MWK {item.totalValue.toLocaleString()}
+                                  </p>
                                 </div>
                               </div>
 
                               <div className="flex gap-2">
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button size="sm" variant="outline">
-                                      <Tag className="h-3 w-3 mr-1" />
-                                      Apply Discount
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Apply Discount</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4">
-                                      <p>Medicine: {item.name}</p>
-                                      <input
-                                        type="number"
-                                        placeholder="Discount %"
-                                        className="border rounded p-2 w-full"
-                                        id="discountPercent"
-                                      />
-                                      <Button onClick={() => {
-                                        const percent = (document.getElementById("discountPercent") as HTMLInputElement).value
-                                        toast({ title: "Discount Applied", description: `${percent}% discount applied to ${item.name}` })
-                                      }}>
-                                        Apply Discount
-                                      </Button>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-
-                                <Button size="sm" variant="destructive">
-                                  <Trash2 className="h-3 w-3 mr-1" />
-                                  Dispose
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={disposingId === item.id}
+                                  onClick={() => item.uniqueKey && disposeItem(item.uniqueKey, item.name)}
+                                >
+                                  {disposingId === item.id ? (
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                  )}
+                                  {disposingId === item.id ? "Disposing..." : "Dispose"}
                                 </Button>
                               </div>
                             </div>
@@ -615,13 +712,16 @@ export default function ForecastExpiryPage() {
                   </Card>
                 </TabsContent>
 
-                {/* Reorder List Tab */}
                 <TabsContent value="reorder">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         <span>Reorder Recommendations</span>
-                        <Button variant="outline" size="sm" onClick={generateReorderFromInventory}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={generateReorderFromInventory}
+                        >
                           Analyze Stock
                         </Button>
                       </CardTitle>
@@ -636,19 +736,25 @@ export default function ForecastExpiryPage() {
                       ) : (
                         <div className="space-y-4">
                           {reorderRecs.map((rec) => (
-                            <div key={rec.id} className="border rounded-lg p-4">
+                            <div key={rec.renderKey} className="border rounded-lg p-4">
                               <div className="flex items-start justify-between mb-3">
                                 <div>
-                                  <h3 className="font-semibold text-slate-900">{rec.medicine.name}</h3>
+                                  <h3 className="font-semibold text-slate-900">
+                                    {rec.medicine.name}
+                                  </h3>
                                   <p className="text-sm text-slate-500">
                                     Current stock: {rec.currentStock} units
                                   </p>
                                 </div>
-                                <Badge className={
-                                  rec.priority === "HIGH" ? "bg-red-100 text-red-700" :
-                                  rec.priority === "MEDIUM" ? "bg-yellow-100 text-yellow-700" :
-                                  "bg-blue-100 text-blue-700"
-                                }>
+                                <Badge
+                                  className={
+                                    rec.priority === "HIGH"
+                                      ? "bg-red-100 text-red-700"
+                                      : rec.priority === "MEDIUM"
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : "bg-blue-100 text-blue-700"
+                                  }
+                                >
                                   {rec.priority} Priority
                                 </Badge>
                               </div>
