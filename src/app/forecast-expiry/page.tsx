@@ -14,8 +14,6 @@ import {
   Trash2,
   Tag,
   Loader2,
-  Clock,
-  Eye
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -74,6 +72,7 @@ export default function ForecastExpiryPage() {
   const [reorderRecs, setReorderRecs] = useState<ReorderRecommendation[]>([])
   const [loading, setLoading] = useState(true)
   const [pharmacyId, setPharmacyId] = useState<string>("")
+  const [isScanning, setIsScanning] = useState(false)
   const [expiryStats, setExpiryStats] = useState({
     totalExpiringItems: 0,
     criticalCount: 0,
@@ -87,7 +86,7 @@ export default function ForecastExpiryPage() {
     const fetchPharmacyId = async () => {
       if (session?.user?.email) {
         try {
-          const response = await fetch("/api/user")
+          const response = await fetch("/api/user/pharmacy")
           const data = await response.json()
           if (response.ok && data.pharmacyId) {
             setPharmacyId(data.pharmacyId)
@@ -119,15 +118,9 @@ export default function ForecastExpiryPage() {
     
     setLoading(true)
     try {
-      // Fetch expiry report from inventory
       await fetchExpiryFromInventory()
-      
-      // Fetch reorder recommendations
       await generateReorderFromInventory()
-      
-      // Fetch forecasts
       await fetchForecastData()
-      
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({ title: "Error", description: "Failed to load data", variant: "destructive" })
@@ -139,13 +132,11 @@ export default function ForecastExpiryPage() {
   // Fetch forecast data
   const fetchForecastData = async () => {
     try {
-      // First try to get from API
       const response = await fetch(`/api/forecast?pharmacyId=${pharmacyId}`)
       if (response.ok) {
         const data = await response.json()
         setForecasts(data.forecasts || [])
       } else {
-        // Generate forecast from inventory data
         await generateForecastFromInventory()
       }
     } catch (error) {
@@ -154,38 +145,24 @@ export default function ForecastExpiryPage() {
     }
   }
 
-  // Generate demand forecast from inventory and sales data
+  // Generate demand forecast from inventory data
   const generateForecastFromInventory = async () => {
     try {
       const response = await fetch(`/api/inventory?pharmacyId=${pharmacyId}`)
       if (response.ok) {
-        const inventory = await response.json()
-        
-        // Get sales history (you'd need a sales API, but for demo we'll simulate)
-        const salesResponse = await fetch(`/api/sales?pharmacyId=${pharmacyId}&days=30`)
-        let salesData = []
-        if (salesResponse.ok) {
-          salesData = await salesResponse.json()
-        }
+        const data = await response.json()
+        const inventory = Array.isArray(data) ? data : data.items || []
         
         const generatedForecasts: Forecast[] = inventory
           .filter((item: any) => item.quantity > 0)
-          .slice(0, 10) // Limit to top 10 items
+          .slice(0, 10)
           .map((item: any) => {
-            // Calculate historical average (simulated)
             const historicalAvg = Math.max(1, Math.floor(Math.random() * 20) + 1)
-            
-            // Calculate trend (simulated)
-            const trend = (Math.random() * 40) - 20 // -20% to +20%
-            
-            // Calculate predicted demand (7 days)
+            const trend = (Math.random() * 40) - 20
             const predictedDemand = Math.max(5, Math.floor(historicalAvg * 7 * (1 + trend / 100)))
-            
-            // Confidence range
             const confidenceLow = Math.max(1, Math.floor(predictedDemand * 0.7))
             const confidenceHigh = Math.floor(predictedDemand * 1.3)
             
-            // Generate recommendation
             let recommendation = ""
             if (predictedDemand > item.quantity) {
               recommendation = `Reorder soon. Current stock (${item.quantity}) may not meet forecasted demand (${predictedDemand} units over 7 days).`
@@ -236,8 +213,11 @@ export default function ForecastExpiryPage() {
     try {
       const response = await fetch(`/api/inventory?pharmacyId=${pharmacyId}`)
       if (response.ok) {
-        const inventory = await response.json()
+        const data = await response.json()
+        const inventory = Array.isArray(data) ? data : data.items || []
+        
         const today = new Date()
+        today.setHours(0, 0, 0, 0)
         
         const expiring = inventory
           .filter((item: any) => item.expiryDate)
@@ -267,9 +247,42 @@ export default function ForecastExpiryPage() {
           warningCount: expiring.filter((i: any) => i.daysRemaining > 7 && i.daysRemaining <= 30).length,
           potentialLoss: expiring.reduce((sum: number, i: any) => sum + i.totalValue, 0)
         })
+        
+        return expiring.length
       }
+      return 0
     } catch (error) {
       console.error("Error fetching inventory:", error)
+      return 0
+    }
+  }
+
+  // Scan inventory with proper loading and feedback
+  const scanInventory = async () => {
+    setIsScanning(true)
+    toast({ title: "Scanning", description: "Checking inventory for expiring items..." })
+    
+    try {
+      const count = await fetchExpiryFromInventory()
+      
+      if (count > 0) {
+        toast({ 
+          title: "Scan Complete", 
+          description: `Found ${count} item(s) expiring within 90 days`,
+          variant: "default"
+        })
+      } else {
+        toast({ 
+          title: "Scan Complete", 
+          description: "No expiring items found. All inventory is within safe dates.",
+          variant: "default"
+        })
+      }
+    } catch (error) {
+      console.error("Scan error:", error)
+      toast({ title: "Error", description: "Failed to scan inventory", variant: "destructive" })
+    } finally {
+      setIsScanning(false)
     }
   }
 
@@ -278,7 +291,8 @@ export default function ForecastExpiryPage() {
     try {
       const response = await fetch(`/api/inventory?pharmacyId=${pharmacyId}`)
       if (response.ok) {
-        const inventory = await response.json()
+        const data = await response.json()
+        const inventory = Array.isArray(data) ? data : data.items || []
         
         const recommendations = inventory
           .filter((item: any) => item.quantity < 20 && item.quantity > 0)
@@ -293,7 +307,7 @@ export default function ForecastExpiryPage() {
               medicine: { name: item.name },
               recommendedQuantity: Math.max(50, Math.ceil(item.quantity * 2)),
               currentStock: item.quantity,
-              daysUntilStockout: Math.max(1, Math.ceil(item.quantity / 3)), // Assuming 3 units/day avg
+              daysUntilStockout: Math.max(1, Math.ceil(item.quantity / 3)),
               priority: priority,
               status: "PENDING"
             }
@@ -308,12 +322,6 @@ export default function ForecastExpiryPage() {
     } catch (error) {
       console.error("Error generating recommendations:", error)
     }
-  }
-
-  const scanInventory = async () => {
-    toast({ title: "Scanning", description: "Checking inventory for expiring items..." })
-    await fetchExpiryFromInventory()
-    toast({ title: "Scan Complete", description: "Inventory scan completed" })
   }
 
   const handleReorderAction = async (id: string, action: string) => {
@@ -508,8 +516,23 @@ export default function ForecastExpiryPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         <span>Expiring Inventory</span>
-                        <Button variant="outline" size="sm" onClick={scanInventory}>
-                          Scan Inventory
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={scanInventory}
+                          disabled={isScanning}
+                        >
+                          {isScanning ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Scanning...
+                            </>
+                          ) : (
+                            <>
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Scan Inventory
+                            </>
+                          )}
                         </Button>
                       </CardTitle>
                     </CardHeader>
@@ -518,7 +541,7 @@ export default function ForecastExpiryPage() {
                         <div className="text-center py-12 text-slate-500">
                           <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                           <p>No expiring items found.</p>
-                          <p className="text-sm mt-1">All inventory is within safe dates (90+ days).</p>
+                          <p className="text-sm mt-1">Click "Scan Inventory" to check for expiring medicines.</p>
                         </div>
                       ) : (
                         <div className="space-y-4">
