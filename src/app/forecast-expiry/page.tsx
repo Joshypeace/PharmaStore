@@ -156,7 +156,7 @@ export default function ForecastExpiryPage() {
           .map((item: any, index: number) => ({
             renderKey: `forecast-gen-${item.id ?? "unknown"}-${index}`,
             medicineId: item.id || `temp-${index}`,
-            medicineName: item.name || "Unknown Medicine",
+            medicineName: item.name,
             predictedDemand: Math.max(5, Math.floor((Math.random() * 20 + 5) * 7)),
             confidenceRange: {
               low: Math.max(1, Math.floor(Math.random() * 50) + 20),
@@ -167,7 +167,7 @@ export default function ForecastExpiryPage() {
               trend: Math.random() * 40 - 20,
               seasonality: 1,
             },
-            recommendation: `Stock levels adequate for ${item.name || "this item"}. Monitor regularly.`,
+            recommendation: `Stock levels adequate for ${item.name}. Monitor regularly.`,
           }))
 
         setForecasts(generatedForecasts)
@@ -214,11 +214,11 @@ export default function ForecastExpiryPage() {
             return {
               id: item.id,
               uniqueKey: `expiry-${item.id ?? "unknown"}-${item.batch ?? "default"}-${index}`,
-              name: item.name || "Unknown Medicine",
+              name: item.name,
               batchNumber: item.batch || "N/A",
-              quantity: item.quantity || 0,
-              price: item.price || 0,
-              totalValue: (item.quantity || 0) * (item.price || 0),
+              quantity: item.quantity,
+              price: item.price,
+              totalValue: item.quantity * item.price,
               daysRemaining,
               status: daysRemaining <= 30 ? "Expiring Soon" : "OK",
             }
@@ -255,39 +255,41 @@ export default function ForecastExpiryPage() {
       }
 
       const data = await response.json()
-      const items = Array.isArray(data.items) ? data.items : []
-      
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
 
-      // Map with uniqueKey to fix the React key prop error
-      const mappedItems: ExpiringItem[] = items.map((item: any, index: number) => {
-        const expiryDate = new Date(item.expiryDate)
-        const daysRemaining = Math.ceil(
-          (expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24)
-        )
+      // Fix: Ensure items from scan API also have uniqueKey AND calculate daysRemaining correctly
+      const scannedItems: ExpiringItem[] = (data.items || []).map((item: any, index: number) => {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        // Use provided daysRemaining if available, otherwise calculate from expiryDate
+        let daysRemaining = item.daysRemaining;
+        if (daysRemaining === undefined && item.expiryDate) {
+          const expiryDate = new Date(item.expiryDate)
+          daysRemaining = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24))
+        }
+        
         return {
           id: item.id,
-          uniqueKey: `scan-expiry-${item.id ?? "unknown"}-${item.batch ?? "default"}-${index}`,
-          name: item.name || "Unknown Medicine",
+          uniqueKey: item.uniqueKey || `expiry-scan-${item.id ?? "unknown"}-${item.batch ?? "default"}-${index}`,
+          name: item.name,
           batchNumber: item.batch || "N/A",
-          quantity: item.quantity || 0,
-          price: item.price || 0,
-          totalValue: (item.quantity || 0) * (item.price || 0),
-          daysRemaining,
-          status: daysRemaining <= 30 ? "Expiring Soon" : "OK",
+          quantity: item.quantity,
+          price: item.price,
+          totalValue: item.quantity * item.price,
+          daysRemaining: daysRemaining ?? 0,
+          status: (daysRemaining ?? 0) <= 30 ? "Expiring Soon" : "OK",
         }
       })
 
-      setExpiringItems(mappedItems)
+      setExpiringItems(scannedItems)
       setExpiryStats({
-        totalExpiringItems: data.totalExpiringItems || mappedItems.filter(i => i.daysRemaining <= 30).length,
-        criticalCount: data.criticalCount || mappedItems.filter(i => i.daysRemaining <= 7).length,
-        warningCount: data.warningCount || mappedItems.filter(i => i.daysRemaining > 7 && i.daysRemaining <= 30).length,
-        potentialLoss: data.potentialLoss || mappedItems.reduce((sum, i) => sum + i.totalValue, 0),
+        totalExpiringItems: data.totalExpiringItems || 0,
+        criticalCount: data.criticalCount || 0,
+        warningCount: data.warningCount || 0,
+        potentialLoss: data.potentialLoss || 0,
       })
 
-      const count = mappedItems.length
+      const count = scannedItems.length
 
       if (count > 0) {
         toast({
@@ -333,7 +335,7 @@ export default function ForecastExpiryPage() {
             recommendations.push({
               renderKey: `reorder-${item.id ?? "unknown"}-${index}`,
               id: item.id,
-              medicine: { name: item.name || "Unknown Medicine" },
+              medicine: { name: item.name },
               recommendedQuantity: Math.max(50, Math.ceil(item.quantity * 2)),
               currentStock: item.quantity,
               daysUntilStockout: Math.max(1, Math.ceil(item.quantity / 3)),
@@ -359,22 +361,13 @@ export default function ForecastExpiryPage() {
     setReorderRecs((prev) => prev.filter((rec) => rec.id !== id))
   }
 
-  const disposeItem = async (uniqueKey: string, itemName: string) => {
-    const itemToDispose = expiringItems.find(i => i.uniqueKey === uniqueKey)
-    if (!itemToDispose) return
-
+  const disposeItem = async (itemId: string, itemName: string) => {
     if (!confirm(`Are you sure you want to dispose ${itemName}? This action cannot be undone.`)) {
       return
     }
 
-    const itemId = itemToDispose.id
-    if (!itemId) {
-      toast({ title: "Error", description: "Item ID missing", variant: "destructive" })
-      return
-    }
-
     // Optimistically remove from UI immediately
-    setExpiringItems((prev) => prev.filter((i) => i.uniqueKey !== uniqueKey))
+    setExpiringItems((prev) => prev.filter((i) => i.id !== itemId))
     setDisposingId(itemId)
 
     try {
@@ -398,15 +391,18 @@ export default function ForecastExpiryPage() {
       // Update stats after successful disposal
       setExpiryStats((prev) => ({
         ...prev,
-        totalExpiringItems: itemToDispose.daysRemaining <= 30 ? Math.max(0, prev.totalExpiringItems - 1) : prev.totalExpiringItems,
-        criticalCount: itemToDispose.daysRemaining <= 7 ? Math.max(0, prev.criticalCount - 1) : prev.criticalCount,
-        warningCount: (itemToDispose.daysRemaining > 7 && itemToDispose.daysRemaining <= 30) ? Math.max(0, prev.warningCount - 1) : prev.warningCount,
-        potentialLoss: Math.max(0, prev.potentialLoss - itemToDispose.totalValue),
+        totalExpiringItems: Math.max(0, prev.totalExpiringItems - 1),
+        criticalCount: Math.max(0, prev.criticalCount - 1),
+        potentialLoss: Math.max(
+          0,
+          prev.potentialLoss -
+            (expiringItems.find((i) => i.id === itemId)?.totalValue ?? 0)
+        ),
       }))
     } catch (error: any) {
       console.error("Error disposing item:", error)
 
-      // Restore the items in UI on failure by re-fetching
+      // Restore the item in UI on failure by re-fetching
       await fetchExpiryFromInventory()
 
       toast({
@@ -419,6 +415,7 @@ export default function ForecastExpiryPage() {
     }
   }
 
+  // ─── Stat cards defined as plain data; keys applied directly on the Card ───
   const statCards = [
     {
       key: "stat-expiring-soon",
@@ -498,6 +495,7 @@ export default function ForecastExpiryPage() {
                 <p className="text-slate-600">AI-powered demand forecasting and expiry monitoring</p>
               </div>
 
+              {/* ── Stat Cards: key goes on the outermost element in the map ── */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 {statCards.map((card) => (
                   <Card key={card.key} className="bg-white shadow-md">
@@ -524,6 +522,7 @@ export default function ForecastExpiryPage() {
                   <TabsTrigger value="reorder">Reorder List</TabsTrigger>
                 </TabsList>
 
+                {/* ── Demand Forecast Tab ── */}
                 <TabsContent value="forecast">
                   <Card>
                     <CardHeader>
@@ -614,6 +613,7 @@ export default function ForecastExpiryPage() {
                   </Card>
                 </TabsContent>
 
+                {/* ── Expiry Monitor Tab ── */}
                 <TabsContent value="expiry">
                   <Card>
                     <CardHeader>
@@ -690,11 +690,11 @@ export default function ForecastExpiryPage() {
                               </div>
 
                               <div className="flex gap-2">
-                                <Button
+                                {/* <Button
                                   size="sm"
                                   variant="destructive"
                                   disabled={disposingId === item.id}
-                                  onClick={() => item.uniqueKey && disposeItem(item.uniqueKey, item.name)}
+                                  onClick={() => item.id && disposeItem(item.id, item.name)}
                                 >
                                   {disposingId === item.id ? (
                                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -702,7 +702,7 @@ export default function ForecastExpiryPage() {
                                     <Trash2 className="h-3 w-3 mr-1" />
                                   )}
                                   {disposingId === item.id ? "Disposing..." : "Dispose"}
-                                </Button>
+                                </Button> */}
                               </div>
                             </div>
                           ))}
@@ -712,6 +712,7 @@ export default function ForecastExpiryPage() {
                   </Card>
                 </TabsContent>
 
+                {/* ── Reorder List Tab ── */}
                 <TabsContent value="reorder">
                   <Card>
                     <CardHeader>

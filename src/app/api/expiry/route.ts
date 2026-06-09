@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Add DELETE endpoint for disposing expired items
+
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession()
