@@ -86,7 +86,7 @@ export default function ForecastExpiryPage() {
     const fetchPharmacyId = async () => {
       if (session?.user?.email) {
         try {
-          const response = await fetch("/api/user/pharmacy")
+          const response = await fetch("/api/user")
           const data = await response.json()
           if (response.ok && data.pharmacyId) {
             setPharmacyId(data.pharmacyId)
